@@ -69,7 +69,7 @@ const Area = () => {
             })
             const data = await res.json()
             if(res.ok){
-                setAreas(areas.filter(area => area._id !== areaId))
+                setAreas((prevAreas) => prevAreas.filter((area) => area._id !== areaId))
             }else{
                 console.log(data.message)
             }
@@ -92,6 +92,11 @@ const Area = () => {
                 setErrorMessage(null)
                 const updatedAreas = areas.map(area => area._id === selectedArea._id ? data : area)
                 setAreas(updatedAreas)
+                const res = await fetch('/api/area/get-areas')
+                const newData = await res.json()
+                if(res.ok){
+                    setAreas(newData)
+                }
             }else{
                 setErrorMessage(data.message)
             }

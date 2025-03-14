@@ -1,4 +1,5 @@
 import Area from "../models/area.model.js"
+import Table from "../models/table.model.js"
 import { errorHandler } from "../utils/error.js"
 
 export const createArea = async (req,res,next) => {
@@ -31,16 +32,21 @@ export const getAreas = async (req,res,next) => {
     }
 }
 
-export const deleteArea = async (req,res,next) => {
+export const deleteArea = async (req, res, next) => {
     try {
-        const {areaId} = req.params
+        const { areaId } = req.params
 
-        const deletedArea = await Area.findByIdAndDelete(areaId)
+        const deletedArea = await Area.findById(areaId)
 
-        if(!deletedArea){
+        if (!deletedArea) {
             return next(errorHandler(404, 'Area not found'))
         }
-        res.status(200).json({message:'Area deleted successfully'})
+
+        await Table.deleteMany({ area: areaId})
+
+        await Area.findByIdAndDelete(areaId)
+
+        res.status(200).json({ message: 'Area and associated tables deleted successfully' })
     } catch (error) {
         next(error)
     }
