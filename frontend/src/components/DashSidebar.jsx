@@ -9,6 +9,8 @@ import { IoMdLock } from "react-icons/io";
 import { IoMdSettings } from "react-icons/io";
 import { MdPlace } from "react-icons/md";
 import { MdTableBar } from "react-icons/md";
+import { SlCalender } from "react-icons/sl";
+import { IoMdTime } from "react-icons/io";
 
 const DashSidebar = () => {
   const location = useLocation();
@@ -90,6 +92,22 @@ const DashSidebar = () => {
               </Sidebar.Item>
             </Link>
           </Sidebar.Collapse>
+
+          <Sidebar.Collapse icon={SlCalender} label="Reservation">
+            <Link to='/dashboard?tab=reserve'>
+              <Sidebar.Item
+                active={tab === 'reserve'}
+                icon={IoMdTime}
+                labelColor='dark'
+                as='div'
+              >
+                Reserve Table
+              </Sidebar.Item>
+            </Link>
+          </Sidebar.Collapse>
+
+
+          
 
           <Sidebar.Item onClick={handleSignOut} icon={HiArrowSmRight} className='cursor-pointer'>
             Sign Out

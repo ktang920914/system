@@ -47,3 +47,22 @@ export const deleteTable = async (req,res,next) => {
         next(error)
     }
 }
+
+export const updateTable = async (req,res,next) => {
+    try {
+        const {tableId} = req.params
+        const {tablepax, minimumspent} = req.body
+
+        const updatedTable = await Table.findByIdAndUpdate(tableId, {
+            tablepax,
+            minimumspent,
+        },{new:true})
+
+        if(!updatedTable){
+            return next(errorHandler(404, 'Table not found'))
+        }
+        res.status(200).json(updatedTable)
+    } catch (error) {
+        next(error)
+    }
+}

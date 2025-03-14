@@ -4,10 +4,12 @@ import React, { useEffect, useState } from 'react'
 const Tables = () => {
 
   const [openModal, setOpenModal] = useState(false)
+  const [openEditModal, setOpenEditModal] = useState(false)
   const [errorMessge, setErrorMessage] = useState(null)
   const [formData, setFormData] = useState({})
   const [areas, setAreas] = useState([])
   const [tables, setTables] = useState([])
+  const [currentTable, setCurrentTable] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedArea, setSelectedArea] = useState('')
   const ITEMS_PER_PAGE = 7
@@ -41,7 +43,7 @@ const Tables = () => {
             }
             return new Date(b.updatedAt) - new Date(a.updatedAt);
           });
-          setTables(data)
+          setTables(sortedTables)
         }
       } catch (error) {
         console.log(error.message)
@@ -140,6 +142,52 @@ const Tables = () => {
       return new Date(b.updatedAt) - new Date(a.updatedAt);
     });
 
+  const handleEditModal = (table) => {
+    setFormData(table)
+    setCurrentTable(table.tablename)
+    setOpenEditModal(!openEditModal)
+    setErrorMessage(null)
+  }
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const { tablepax, minimumspent } = formData;
+  
+      if (tablepax < 1) {
+        return setErrorMessage('Table pax must be at least 1');
+      }
+      if (minimumspent < 0 || minimumspent > 99999) {
+        return setErrorMessage('Minimum spent must be between 0-99999');
+      }
+  
+      const tableId = formData._id;
+  
+      const res = await fetch(`/api/table/update-table/${tableId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tablepax, minimumspent }),
+      });
+  
+      const data = await res.json();
+  
+      if (res.ok) {
+        setOpenEditModal(false);
+        setErrorMessage(null);
+        const res = await fetch('/api/table/get-tables');
+        const data = await res.json();
+        if (res.ok) {
+          setTables(data);
+        }
+      } else {
+        setErrorMessage(data.message);
+      }
+    } catch (error) {
+      console.error(error.message);
+      setErrorMessage('An error occurred while updating the table.');
+    }
+  };
+
   const totalPages = Math.ceil(filterTables.length / ITEMS_PER_PAGE)
 
   const getPaginationData = () => {
@@ -184,7 +232,7 @@ const Tables = () => {
                     <Button color="failure"onClick={() => {handleDelete(table._id)}}>Delete</Button>
                   </Table.Cell>
                   <Table.Cell>
-                    <Button color="warning">Edit</Button>
+                    <Button color="warning"onClick={() => {handleEditModal(table)}}>Edit</Button>
                   </Table.Cell>
                 </Table.Row>
               ))}
@@ -200,45 +248,74 @@ const Tables = () => {
         </div>
 
         <Modal show={openModal} size="md" popup onClose={() => setOpenModal(false)}>
-                <Modal.Header />
-                <Modal.Body>
-                  <div className="space-y-2">
-                    <h1 className="text-2xl text-gray-500 font-semibold">Create table</h1>
-                        {
-                            errorMessge && (
-                                <Alert color='failure'>
-                                    {errorMessge}
-                                </Alert>
-                            )
-                        }
-                        <form onSubmit={handleSubmit}>
-                            <div className="mt-4">
-                                <Label value="Area" />
-                                <Select id='area' onChange={handleChange}required>
-                                <option value=''>Select area</option>
-                                {areas.map((area) => (
-                                  <option key={area._id} value={area._id}>{area.areaname}</option>
-                                ))}
-                                </Select>
-                            </div>
-                            <div className="mt-4">
-                                <Label value="Table number" />
-                                <TextInput type='number' id="tablename" placeholder="Enter Tables number (1-100)"
-                                onChange={handleChange} required/>
-                            </div>
-                            <div className="mt-4">
-                                <Label value="Pax" />
-                                <TextInput type='number' id='tablepax' placeholder='Enter pax' onChange={handleChange}required/>
-                            </div>
-                            <div className="mt-4 mb-4">
-                                <Label value="Minimum spent" />
-                                <TextInput type='number' id='minimumspent' placeholder='Enter minimum spent' onChange={handleChange}required/>
-                            </div>
-                            <Button type='submit'>Submit</Button>
-                        </form>
-                  </div>
-                </Modal.Body>
-              </Modal>
+          <Modal.Header />
+          <Modal.Body>
+            <div className="space-y-2">
+              <h1 className="text-2xl text-gray-500 font-semibold">Create table</h1>
+                  {
+                      errorMessge && (
+                          <Alert color='failure'>
+                              {errorMessge}
+                          </Alert>
+                      )
+                  }
+                  <form onSubmit={handleSubmit}>
+                      <div className="mt-4">
+                          <Label value="Area" />
+                          <Select id='area' onChange={handleChange}required>
+                          <option value=''>Select area</option>
+                          {areas.map((area) => (
+                            <option key={area._id} value={area._id}>{area.areaname}</option>
+                          ))}
+                          </Select>
+                      </div>
+                      <div className="mt-4">
+                          <Label value="Table number" />
+                          <TextInput type='number' id="tablename" placeholder="Enter Tables number (1-100)"
+                          onChange={handleChange} required/>
+                      </div>
+                      <div className="mt-4">
+                          <Label value="Pax" />
+                          <TextInput type='number' id='tablepax' placeholder='Enter pax' onChange={handleChange}required/>
+                      </div>
+                      <div className="mt-4 mb-4">
+                          <Label value="Minimum spent" />
+                          <TextInput type='number' id='minimumspent' placeholder='Enter minimum spent' onChange={handleChange}required/>
+                      </div>
+                      <Button type='submit'>Submit</Button>
+                  </form>
+            </div>
+          </Modal.Body>
+        </Modal>
+
+        <Modal show={openEditModal} size="md" popup onClose={() => setOpenEditModal(false)}>
+          <Modal.Header />
+          <Modal.Body>
+            <div className="space-y-2">
+              <h1 className="text-2xl text-gray-500 font-semibold">Update {currentTable} table</h1>
+                  {
+                      errorMessge && (
+                          <Alert color='failure'>
+                              {errorMessge}
+                          </Alert>
+                      )
+                  }
+                  <form onSubmit={handleEditSubmit}>
+                      <div className="mt-4">
+                          <Label value="Pax" />
+                          <TextInput type='number' id='tablepax' placeholder='Enter pax'
+                          value={formData.tablepax} onChange={handleChange}required/>
+                      </div>
+                      <div className="mt-4 mb-4">
+                          <Label value="Minimum spent" />
+                          <TextInput type='number' id='minimumspent' placeholder='Enter minimum spent'
+                          value={formData.minimumspent} onChange={handleChange}required/>
+                      </div>
+                      <Button type='submit'>Submit</Button>
+                  </form>
+            </div>
+          </Modal.Body>
+        </Modal>
    </div>
   )
 }
