@@ -4,6 +4,7 @@ import DashSidebar from '../components/DashSidebar'
 import Profile from '../components/Profile'
 import ChangePassword from '../components/ChangePassword'
 import Area from '../components/Area'
+import Tables from '../components/Tables'
 
 const Dashboard = () => {
   
@@ -28,8 +29,10 @@ const Dashboard = () => {
         { tab === 'profile' && <Profile/>}
         {/* change password */}
         { tab === 'password' && <ChangePassword/>}
-        {/* change password */}
+        {/* area */}
         { tab === 'area' && <Area/>}
+        {/* table */}
+        { tab === 'table' && <Tables/>}
     </div>
   )
 }

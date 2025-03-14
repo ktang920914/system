@@ -1,4 +1,4 @@
-import { Alert, Button, Label, Modal, Select, Table, TextInput } from 'flowbite-react'
+import { Alert, Button, Label, Modal, Pagination, Select, Table, TextInput } from 'flowbite-react'
 import React, { useEffect, useState } from 'react'
 
 const Area = () => {
@@ -9,7 +9,8 @@ const Area = () => {
     const [areas, setAreas] = useState([])
     const [openEditModal, setOpenEditModal] = useState(false)
     const [selectedArea, setSelectedArea] = useState(null)
-    
+    const [currentPage, setCurrentPage] = useState(1)
+    const ITEMS_PER_PAGE = 7
 
     useEffect(() => {
         const fetchAreas = async () => {
@@ -106,6 +107,14 @@ const Area = () => {
         setErrorMessage(null)
     }
 
+    const totalPages = Math.ceil(areas.length / ITEMS_PER_PAGE)
+
+    const getPaginationData = () => {
+        const startIndex = (currentPage - 1)* ITEMS_PER_PAGE
+        const endIndex = startIndex + ITEMS_PER_PAGE
+        return areas.slice(startIndex, endIndex)
+    }
+
   return (
     <div className='w-full max-w-3xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar
    scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
@@ -123,7 +132,7 @@ const Area = () => {
             <Table.HeadCell><span>Edit</span></Table.HeadCell>
           </Table.Head>
           <Table.Body>
-            {areas.map((area) => (
+            {getPaginationData().map((area) => (
                 <Table.Row key={area._id}>
                     <Table.Cell>{new Date(area.updatedAt).toLocaleDateString()}</Table.Cell>
                     <Table.Cell>{area.areaname}</Table.Cell>
@@ -139,6 +148,14 @@ const Area = () => {
             ))}
           </Table.Body>
         </Table>
+
+        <div className='flex justify-center mt-4'>
+            <Pagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={(page) => setCurrentPage(page)}
+            />
+        </div>
 
         
       <Modal show={openModal} size="md" popup onClose={() => setOpenModal(false)}>
@@ -207,7 +224,7 @@ const Area = () => {
                     
                     <div className='my-4'>
                         <Label value='Category'/>
-                        <Select id="category" onChange={handleChange} required valuee={formData.category}>
+                        <Select id="category" onChange={handleChange} value={formData.category} required>
                             <option value='Uncategory'>Select category</option>
                             <option value='REGULAR'>REGULAR</option>
                             <option value='VIP'>VIP</option>

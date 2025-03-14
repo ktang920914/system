@@ -8,6 +8,7 @@ import { signOutSuccess } from '../redux/user/userSlice'
 import { IoMdLock } from "react-icons/io";
 import { IoMdSettings } from "react-icons/io";
 import { MdPlace } from "react-icons/md";
+import { MdTableBar } from "react-icons/md";
 
 const DashSidebar = () => {
   const location = useLocation();
@@ -75,6 +76,17 @@ const DashSidebar = () => {
                 as='div'
               >
                 Area
+              </Sidebar.Item>
+            </Link>
+
+            <Link to='/dashboard?tab=table'>
+              <Sidebar.Item
+                active={tab === 'table'}
+                icon={MdTableBar}
+                labelColor='dark'
+                as='div'
+              >
+                Table
               </Sidebar.Item>
             </Link>
           </Sidebar.Collapse>
