@@ -33,6 +33,14 @@ const Tables = () => {
         const res = await fetch('/api/table/get-tables')
         const data = await res.json()
         if(res.ok){
+          const sortedTables = data.sort((a, b) => {
+            const aNumber = parseInt(a.tablename.match(/\d+/)[0]);
+            const bNumber = parseInt(b.tablename.match(/\d+/)[0]);
+            if (aNumber !== bNumber) {
+              return bNumber - aNumber;
+            }
+            return new Date(b.updatedAt) - new Date(a.updatedAt);
+          });
           setTables(data)
         }
       } catch (error) {
@@ -110,7 +118,27 @@ const Tables = () => {
     setCurrentPage(1)
   }
 
-  const filterTables = selectedArea ? tables.filter(table => table.area === selectedArea) : tables
+  const filterTables = selectedArea 
+  ? tables.filter(table => table.area === selectedArea).sort((a, b) => {
+      const aNumber = parseInt(a.tablename.match(/\d+/)[0]);
+      const bNumber = parseInt(b.tablename.match(/\d+/)[0]);
+
+      if (aNumber !== bNumber) {
+        return bNumber - aNumber;
+      }
+
+      return new Date(b.updatedAt) - new Date(a.updatedAt);
+    })
+  : tables.sort((a, b) => {
+      const aNumber = parseInt(a.tablename.match(/\d+/)[0]);
+      const bNumber = parseInt(b.tablename.match(/\d+/)[0]);
+
+      if (aNumber !== bNumber) {
+        return bNumber - aNumber;
+      }
+
+      return new Date(b.updatedAt) - new Date(a.updatedAt);
+    });
 
   const totalPages = Math.ceil(filterTables.length / ITEMS_PER_PAGE)
 
@@ -194,7 +222,7 @@ const Tables = () => {
                                 </Select>
                             </div>
                             <div className="mt-4">
-                                <Label value="Table name" />
+                                <Label value="Table number" />
                                 <TextInput type='number' id="tablename" placeholder="Enter Tables number (1-100)"
                                 onChange={handleChange} required/>
                             </div>
