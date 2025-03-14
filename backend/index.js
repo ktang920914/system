@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser'
 import mongoose from 'mongoose'
 import authRoute from './routes/auth.route.js'
 import userRoute from './routes/user.route.js'
+import areaRoute from './routes/area.route.js'
 
 dotenv.config()
 const app = express()
@@ -18,6 +19,7 @@ mongoose.connect(process.env.MONGO)
 
 app.use('/api/auth', authRoute)
 app.use('/api/user', userRoute)
+app.use('/api/area', areaRoute)
 
 app.get('/', (req,res) => {
     res.send('<h1>Welcome to backend system</h1>')

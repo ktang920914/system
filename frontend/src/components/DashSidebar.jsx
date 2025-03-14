@@ -6,6 +6,8 @@ import { Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { signOutSuccess } from '../redux/user/userSlice'
 import { IoMdLock } from "react-icons/io";
+import { IoMdSettings } from "react-icons/io";
+import { MdPlace } from "react-icons/md";
 
 const DashSidebar = () => {
   const location = useLocation();
@@ -63,6 +65,19 @@ const DashSidebar = () => {
               Change Password
             </Sidebar.Item>
           </Link>
+
+          <Sidebar.Collapse icon={IoMdSettings} label="Setting">
+            <Link to='/dashboard?tab=area'>
+              <Sidebar.Item
+                active={tab === 'area'}
+                icon={MdPlace}
+                labelColor='dark'
+                as='div'
+              >
+                Area
+              </Sidebar.Item>
+            </Link>
+          </Sidebar.Collapse>
 
           <Sidebar.Item onClick={handleSignOut} icon={HiArrowSmRight} className='cursor-pointer'>
             Sign Out

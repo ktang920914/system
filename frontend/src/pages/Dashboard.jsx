@@ -3,6 +3,7 @@ import {useLocation} from 'react-router-dom'
 import DashSidebar from '../components/DashSidebar'
 import Profile from '../components/Profile'
 import ChangePassword from '../components/ChangePassword'
+import Area from '../components/Area'
 
 const Dashboard = () => {
   
@@ -27,6 +28,8 @@ const Dashboard = () => {
         { tab === 'profile' && <Profile/>}
         {/* change password */}
         { tab === 'password' && <ChangePassword/>}
+        {/* change password */}
+        { tab === 'area' && <Area/>}
     </div>
   )
 }
