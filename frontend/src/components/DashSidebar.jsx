@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Sidebar, SidebarItem } from 'flowbite-react';
+import { Sidebar } from 'flowbite-react';
 import { HiUser, HiArrowSmRight } from 'react-icons/hi';
 import { useLocation } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { signOutSuccess } from '../redux/user/userSlice'
+import { IoMdLock } from "react-icons/io";
 
 const DashSidebar = () => {
   const location = useLocation();
@@ -49,6 +50,17 @@ const DashSidebar = () => {
               as='div'
             >
               Profile
+            </Sidebar.Item>
+          </Link>
+
+          <Link to='/dashboard?tab=password'>
+            <Sidebar.Item
+              active={tab === 'password'}
+              icon={IoMdLock}
+              labelColor='dark'
+              as='div'
+            >
+              Change Password
             </Sidebar.Item>
           </Link>
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import {useLocation} from 'react-router-dom'
 import DashSidebar from '../components/DashSidebar'
 import Profile from '../components/Profile'
+import ChangePassword from '../components/ChangePassword'
 
 const Dashboard = () => {
   
@@ -24,6 +25,8 @@ const Dashboard = () => {
       </div>
         {/* profile */}
         { tab === 'profile' && <Profile/>}
+        {/* change password */}
+        { tab === 'password' && <ChangePassword/>}
     </div>
   )
 }
