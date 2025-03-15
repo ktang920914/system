@@ -27,6 +27,7 @@ const ReserveReport = () => {
 
       <Table hoverable className="shadow-md mt-4">
         <Table.Head>
+        <Table.HeadCell>Date</Table.HeadCell>
           <Table.HeadCell>Table</Table.HeadCell>
           <Table.HeadCell>Customer (phone)</Table.HeadCell>
           <Table.HeadCell>Reservation</Table.HeadCell>
