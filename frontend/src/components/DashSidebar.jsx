@@ -11,6 +11,7 @@ import { MdPlace } from "react-icons/md";
 import { MdTableBar } from "react-icons/md";
 import { SlCalender } from "react-icons/sl";
 import { IoMdTime } from "react-icons/io";
+import { TbReport } from "react-icons/tb";
 
 const DashSidebar = () => {
   const location = useLocation();
@@ -104,10 +105,18 @@ const DashSidebar = () => {
                 Reserve Table
               </Sidebar.Item>
             </Link>
+
+            <Link to='/dashboard?tab=reserve-report'>
+              <Sidebar.Item
+                active={tab === 'reserve-report'}
+                icon={TbReport}
+                labelColor='dark'
+                as='div'
+              >
+                Reserve Report
+              </Sidebar.Item>
+            </Link>
           </Sidebar.Collapse>
-
-
-          
 
           <Sidebar.Item onClick={handleSignOut} icon={HiArrowSmRight} className='cursor-pointer'>
             Sign Out

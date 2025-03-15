@@ -6,6 +6,7 @@ import ChangePassword from '../components/ChangePassword'
 import Area from '../components/Area'
 import Tables from '../components/Tables'
 import ReserveTable from '../components/ReserveTable'
+import ReserveReport from '../components/ReserveReport'
 
 const Dashboard = () => {
   
@@ -36,6 +37,8 @@ const Dashboard = () => {
         { tab === 'table' && <Tables/>}
         {/* reserve*/}
         { tab === 'reserve' && <ReserveTable/>}
+        {/* reserve*/}
+        { tab === 'reserve-report' && <ReserveReport/>}
     </div>
   )
 }
