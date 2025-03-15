@@ -5,7 +5,7 @@ const Tables = () => {
 
   const [openModal, setOpenModal] = useState(false)
   const [openEditModal, setOpenEditModal] = useState(false)
-  const [errorMessge, setErrorMessage] = useState(null)
+  const [errorMessage, setErrorMessage] = useState(null)
   const [formData, setFormData] = useState({})
   const [areas, setAreas] = useState([])
   const [tables, setTables] = useState([])
@@ -72,6 +72,10 @@ const Tables = () => {
       const selectedArea = areas.find(a => a._id === area);
       const areaName = selectedArea ? selectedArea.areaname : ''
       const tablenames = Array.from({length:tablename}, (_,i) => `${areaName}${i+1}`)
+      const existingTables = tables.filter(table => tablenames.includes(table.tablename));
+      if (existingTables.length > 0) {
+        return setErrorMessage('Table name is already exists');
+      }
       const res = await fetch('/api/table/create-table',{
         method: 'POST',
         headers:{'Content-Type':'application/json'},
@@ -87,7 +91,7 @@ const Tables = () => {
           setTables(data)
         }
       }else{
-        setErrorMessage(data.message)
+        return setErrorMessage(data.message)
       }
     } catch (error) {
       console.error(error.message);
@@ -253,9 +257,9 @@ const Tables = () => {
             <div className="space-y-2">
               <h1 className="text-2xl text-gray-500 font-semibold">Create table</h1>
                   {
-                      errorMessge && (
+                      errorMessage && (
                           <Alert color='failure'>
-                              {errorMessge}
+                              {errorMessage}
                           </Alert>
                       )
                   }
@@ -294,9 +298,9 @@ const Tables = () => {
             <div className="space-y-2">
               <h1 className="text-2xl text-gray-500 font-semibold">Update {currentTable} table</h1>
                   {
-                      errorMessge && (
+                      errorMessage && (
                           <Alert color='failure'>
-                              {errorMessge}
+                              {errorMessage}
                           </Alert>
                       )
                   }

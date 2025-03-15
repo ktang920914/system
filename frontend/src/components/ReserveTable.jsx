@@ -1,13 +1,17 @@
-import { Button, Card, Pagination, Select } from 'flowbite-react'
+import { Alert, Button, Card, Label, Modal, Pagination, Select, TextInput } from 'flowbite-react'
 import React, { useEffect, useState } from 'react'
 
 const ReserveTable = () => {
 
     const [tables, setTables] = useState([])
     const [areas, setAreas] = useState([])
+    const [formData, setFormData] = useState({})
+    const [openModal, setOpenModal] = useState(false)
+    const [errorMessage, setErrorMessage] = useState(null)
     const [currentPage, setCurrentPage] = useState(1)
     const [selectedArea, setSelectedArea] = useState('')
-    const ITEMS_PER_PAGE = 15
+    const ITEMS_PER_PAGE = 14
+    console.log(formData)
 
     useEffect(() => {
         const FetchAreas = async () => {
@@ -47,7 +51,16 @@ const ReserveTable = () => {
         FetchTables()
     },[])
 
+  const handleChange = (e) => {
+    setFormData({...formData, [e.target.id]: e.target.value.trim()})
+  }
+
   const handleModal = () => {
+    setOpenModal(!openModal)
+    setErrorMessage(null)
+  }
+
+  const handleSubmit = async (e) => {
 
   }
 
@@ -82,12 +95,12 @@ const ReserveTable = () => {
         </div>
         </div>
 
-        <div className='grid lg:grid-cols-5 md:grid-cols-4 sm:grid-cols-3 gap-4 mt-4'>
+        <div className='grid lg:grid-cols-7 md:grid-cols-5 sm:grid-cols-4 gap-4 mt-4'>
             {getPaginationData().map((table) => (
-                <Card key={table._id} className='bg-green-200'>
+                <Card key={table._id} className='bg-green-200 break-words'>
                     <h3 className="text-lg font-semibold">{table.tablename}</h3>
-                    <p>Pax : {table.tablepax}</p>
-                    <p>Minimum Spent : RM{table.minimumspent}</p>
+                    <p>Pax: {table.tablepax}</p>
+                    <p>Min Spent: RM{table.minimumspent}</p>
                 </Card>
             ))}
         </div>
@@ -99,6 +112,37 @@ const ReserveTable = () => {
             onPageChange={(page) => setCurrentPage(page)}
             />
         </div>
+
+        <Modal show={openModal} size="md" popup onClose={() => setOpenModal(false)}>
+          <Modal.Header />
+          <Modal.Body>
+            <div className="space-y-2">
+              <h1 className="text-2xl text-gray-500 font-semibold">Reserve table</h1>
+                  {
+                      errorMessage && (
+                          <Alert color='failure'>
+                              {errorMessage}
+                          </Alert>
+                      )
+                  }
+                  <form onSubmit={handleSubmit}>
+                      <div className="mt-4">
+                          <Label value="Customer name" />
+                          <TextInput type='text' id='customername' placeholder='Enter customer name'onChange={handleChange}required/>
+                      </div>
+                      <div className="mt-4 mb-4">
+                          <Label value="Customer phone" />
+                          <TextInput type='text' id='phonenumber' placeholder='Enter phone number'onChange={handleChange} required/>
+                      </div>
+                      <div className="mt-4 mb-4">
+                          <Label value="Pax" />
+                          <TextInput type='number' id='pax' placeholder='Enter pax'onChange={handleChange} required/>
+                      </div>
+                      <Button type='submit'>Submit</Button>
+                  </form>
+            </div>
+          </Modal.Body>
+        </Modal>
    </div>
   )
 }

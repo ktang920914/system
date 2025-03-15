@@ -81,6 +81,13 @@ const Area = () => {
     const handleEditSubmit = async (e) => {
         e.preventDefault()
         try {
+            const isDuplicate = areas.some(area => 
+                area.areaname === formData.areaname && area._id !== selectedArea._id
+            )
+            if(isDuplicate) {
+                setErrorMessage('Area name already exists')
+                return
+            }
             const res = await fetch(`/api/area/update-area/${selectedArea._id}`,{
                 method: 'PUT',
                 headers: {'Content-Type':'application/json'},
