@@ -12,6 +12,7 @@ const ReserveTable = () => {
   const [currentTable, setCurrentTable] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedArea, setSelectedArea] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
   const ITEMS_PER_PAGE = 14;
 
   useEffect(() => {
@@ -144,6 +145,11 @@ const ReserveTable = () => {
     setCurrentPage(1);
   };
 
+  const handleStatusFilterChange = (e) => {
+    setSelectedStatus(e.target.value);
+    setCurrentPage(1);
+  };
+
   const handleOpenTableSubmit = async (e) => {
     e.preventDefault();
     const selectedTable = tables.find((table) => table._id === selectedTableId);
@@ -228,7 +234,17 @@ const ReserveTable = () => {
     }
   };
 
-  const filteredTables = selectedArea ? tables.filter((table) => table.area === selectedArea) : tables;
+  const filteredTables = tables.filter((table) => {
+    const areaMatch = selectedArea ? table.area === selectedArea : true;
+    const statusMatch = selectedStatus
+      ? selectedStatus === 'reservation'
+        ? table.reserve.status
+        : selectedStatus === 'open'
+        ? table.open.status
+        : true
+      : true;
+    return areaMatch && statusMatch;
+  });
 
   const totalPages = Math.ceil(filteredTables.length / ITEMS_PER_PAGE);
 
@@ -250,6 +266,11 @@ const ReserveTable = () => {
                 {area.areaname}
               </option>
             ))}
+          </Select>
+          <Select id="statusFilter" onChange={handleStatusFilterChange} value={selectedStatus}>
+            <option value="">All Status</option>
+            <option value="reservation">Reservation</option>
+            <option value="open">Open</option>
           </Select>
         </div>
       </div>
