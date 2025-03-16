@@ -68,58 +68,56 @@ export const updateTable = async (req,res,next) => {
     }
 }
 
-export const reserveTable = async (req, res, next) => {
+export const reserveTable = async (req,res,next) => {
     try {
-        const { tableId } = req.params;
-        const { customername, phonenumber, pax, reservedate } = req.body;
+        const {tableId} = req.params
+        const {customername, phonenumber, pax, reservedate} = req.body
 
-        const table = await Table.findById(tableId);
-        if (!table) {
-            return next(errorHandler(404, 'Table not found'));
+        const table = await Table.findById(tableId)
+        if(!table){
+            return next(errorHandler(404, 'Table not found'))
         }
-        if (table.reserve.status) {
-            return next(errorHandler(400, 'Table is already reserved'));
+        if(table.reserve.status){
+            return next(errorHandler(400, 'Table is already reserve'))
         }
         table.reserve = {
-            status: true,
-            timestamp: new Date(reservedate),
+            status:true,
+            timestamp:new Date(reservedate),
             customername,
             phonenumber,
             pax,
-        };
-        table.disabled = true; // 设置禁用状态
-        await table.save();
-        res.status(201).json({ message: 'Reserve successfully' });
-    } catch (error) {
-        next(error);
-    }
-};
-
-export const cancelReserve = async (req, res, next) => {
-    try {
-        const { tableId } = req.params;
-
-        const table = await Table.findById(tableId);
-        if (!table) {
-            return next(errorHandler(404, 'Table not found'));
         }
-        if (!table.reserve.status) {
-            return next(errorHandler(400, 'Table is not reserved'));
+        await table.save()
+        res.status(201).json({message:'Reserve successfully'})
+    } catch (error) {
+        next(error)
+    }
+}
+
+export const cancelReserve = async (req,res,next) => {
+    try {
+        const {tableId} = req.params
+
+        const table = await Table.findById(tableId)
+        if(!table){
+            return next(errorHandler(404, 'Table not found'))
+        }
+        if(!table.reserve.status){
+            return next(errorHandler(400, 'Table is not reserve'))
         }
         table.reserve = {
-            status: false,
-            timestamp: null,
-            customername: null,
-            phonenumber: null,
-            pax: null,
-        };
-        table.disabled = false; // 取消禁用状态
-        await table.save();
-        res.status(200).json({ message: 'Reserve cancelled successfully' });
+            status:false,
+            timestamp:null,
+            customername:null,
+            phonenumber:null,
+            pax:null
+        }
+        await table.save()
+        res.status(200).json({message:'Reserve cancel successfully'})
     } catch (error) {
-        next(error);
+        next(error)
     }
-};
+}
 
 // 示例：后端逻辑
 export const openTable = async (req,res,next) => {
