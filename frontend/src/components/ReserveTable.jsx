@@ -33,30 +33,39 @@ const ReserveTable = () => {
 
   useEffect(() => {
     const FetchTables = async () => {
-      try {
-        const res = await fetch('/api/table/get-tables');
-        const data = await res.json();
-        if (res.ok) {
-          const sortedTables = data.sort((a, b) => {
-            const aNumber = parseInt(a.tablename.match(/\d+/)[0]);
-            const bNumber = parseInt(b.tablename.match(/\d+/)[0]);
-            if (aNumber !== bNumber) {
-              return bNumber - aNumber;
+        try {
+            const res = await fetch('/api/table/get-tables');
+            const data = await res.json();
+            if (res.ok) {
+                const sortedTables = data.sort((a, b) => {
+                    const aNumber = parseInt(a.tablename.match(/\d+/)[0]);
+                    const bNumber = parseInt(b.tablename.match(/\d+/)[0]);
+                    if (aNumber !== bNumber) {
+                        return bNumber - aNumber;
+                    }
+                    return new Date(b.updatedAt) - new Date(a.updatedAt);
+                });
+                setTables(sortedTables);
+
+                // 根据 disabled 字段设置禁用状态
+                const disabledTablesState = {};
+                sortedTables.forEach(table => {
+                    if (table.disabled) {
+                        disabledTablesState[table._id] = true;
+                    }
+                });
+                setDisabledTables(disabledTablesState);
             }
-            return new Date(b.updatedAt) - new Date(a.updatedAt);
-          });
-          setTables(sortedTables);
+        } catch (error) {
+            console.log(error.message);
         }
-      } catch (error) {
-        console.log(error.message);
-      }
     };
     FetchTables();
     const interval = setInterval(FetchTables, 10000);
 
     // 组件卸载时清除定时器
     return () => clearInterval(interval);
-  }, []);
+}, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value.trim() });
