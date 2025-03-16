@@ -297,7 +297,6 @@ const ReserveTable = () => {
             <option value="reservation">Reservation</option>
             <option value="open">Open</option>
           </Select>
-          <Button>Transfer Table</Button>
         </div>
       </div>
 
