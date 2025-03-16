@@ -7,6 +7,7 @@ import Area from '../components/Area'
 import Tables from '../components/Tables'
 import ReserveTable from '../components/ReserveTable'
 import ReserveReport from '../components/ReserveReport'
+import Cashier from '../components/Cashier'
 
 const Dashboard = () => {
   
@@ -35,10 +36,12 @@ const Dashboard = () => {
         { tab === 'area' && <Area/>}
         {/* table */}
         { tab === 'table' && <Tables/>}
-        {/* reserve*/}
+        {/* reserve */}
         { tab === 'reserve' && <ReserveTable/>}
-        {/* reserve*/}
+        {/* reserve-report */}
         { tab === 'reserve-report' && <ReserveReport/>}
+        {/* cashier */}
+        { tab === 'cashier' && <Cashier/>}
     </div>
   )
 }

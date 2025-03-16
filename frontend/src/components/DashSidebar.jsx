@@ -12,6 +12,8 @@ import { MdTableBar } from "react-icons/md";
 import { SlCalender } from "react-icons/sl";
 import { IoMdTime } from "react-icons/io";
 import { TbReport } from "react-icons/tb";
+import { TbCashRegister } from "react-icons/tb";
+import { MdOutlineEventSeat } from "react-icons/md";
 
 const DashSidebar = () => {
   const location = useLocation();
@@ -114,6 +116,19 @@ const DashSidebar = () => {
                 as='div'
               >
                 Reserve Report
+              </Sidebar.Item>
+            </Link>
+          </Sidebar.Collapse>
+
+          <Sidebar.Collapse icon={TbCashRegister} label="Cashier">
+            <Link to='/dashboard?tab=cashier'>
+              <Sidebar.Item
+                active={tab === 'cashier'}
+                icon={MdOutlineEventSeat}
+                labelColor='dark'
+                as='div'
+              >
+                Open Table
               </Sidebar.Item>
             </Link>
           </Sidebar.Collapse>
