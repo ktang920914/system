@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Table, TextInput } from 'flowbite-react';
+import { Button, Label, Table, TextInput } from 'flowbite-react';
 
 const ReserveReport = () => {
 
@@ -23,6 +23,7 @@ const ReserveReport = () => {
       <div className="flex items-center justify-between">
           <h1 className="text-gray-500 text-2xl font-semibold">Reports</h1>
           <form className='flex items-center gap-2'onSubmit={handleSubmit}>
+            <Label value='Date :' />
             <TextInput type="date" id='reportdate' onChange={handleChange} required/>
             <Button type='submit'>Report</Button>
           </form>
@@ -30,7 +31,6 @@ const ReserveReport = () => {
 
         <Table hoverable className="shadow-md mt-4">
           <Table.Head>
-          <Table.HeadCell>Date</Table.HeadCell>
             <Table.HeadCell>Table</Table.HeadCell>
             <Table.HeadCell>Customer (phone)</Table.HeadCell>
             <Table.HeadCell>Pax</Table.HeadCell>
