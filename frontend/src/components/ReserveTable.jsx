@@ -13,6 +13,7 @@ const ReserveTable = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedArea, setSelectedArea] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
+  const [disabledTables, setDisabledTables] = useState({}); // 新增状态变量
   const ITEMS_PER_PAGE = 14;
 
   useEffect(() => {
@@ -62,6 +63,11 @@ const ReserveTable = () => {
   };
 
   const handleReserveModal = (table) => {
+    // 检查桌子是否已经处于 "Open" 状态或已被禁用
+    if (table.open.status || disabledTables[table._id]) {
+      return; // 如果桌子已经打开或已被禁用，则不执行任何操作
+    }
+
     setSelectedTableId(table._id);
     setCurrentTable(table.tablename);
     setOpenReserveModal(true);
@@ -100,6 +106,12 @@ const ReserveTable = () => {
         setErrorMessage(null);
         setFormData({});
 
+        // 禁用当前表格的点击功能
+        setDisabledTables((prev) => ({
+          ...prev,
+          [selectedTableId]: true, // 标记为禁用
+        }));
+
         // 重新获取表格数据以更新 UI
         const fetchTables = async () => {
           const res = await fetch('/api/table/get-tables');
@@ -124,6 +136,12 @@ const ReserveTable = () => {
       });
       const data = await res.json();
       if (res.ok) {
+        // 重新启用当前表格的点击功能
+        setDisabledTables((prev) => ({
+          ...prev,
+          [tableId]: false, // 标记为启用
+        }));
+
         const fetchTables = async () => {
           const res = await fetch('/api/table/get-tables');
           const data = await res.json();
@@ -153,13 +171,14 @@ const ReserveTable = () => {
   const handleOpenTableSubmit = async (e) => {
     e.preventDefault();
     const selectedTable = tables.find((table) => table._id === selectedTableId);
-  const tablePax = selectedTable ? selectedTable.tablepax : 0;
+    const tablePax = selectedTable ? selectedTable.tablepax : 0;
 
-  // 检查输入的 pax 是否超过表格容量
-  if (formData.pax > tablePax) {
-    setErrorMessage(`Pax cannot exceed the table capacity (${tablePax}).`);
-    return;
-  }
+    // 检查输入的 pax 是否超过表格容量
+    if (formData.pax > tablePax) {
+      setErrorMessage(`Pax cannot exceed the table capacity (${tablePax}).`);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/table/open-table/${selectedTableId}`, {
         method: 'PUT',
@@ -182,12 +201,12 @@ const ReserveTable = () => {
           },
         }),
       });
-  
+
       if (res.ok) {
         setOpenOpenTableModal(false);
         setErrorMessage(null);
         setFormData({});
-  
+
         // 重新获取表格数据以更新 UI
         const fetchTables = async () => {
           const res = await fetch('/api/table/get-tables');
@@ -218,6 +237,12 @@ const ReserveTable = () => {
       });
       const data = await res.json();
       if (res.ok) {
+        // 重新启用当前表格的点击功能
+        setDisabledTables((prev) => ({
+          ...prev,
+          [tableId]: false, // 标记为启用
+        }));
+
         const fetchTables = async () => {
           const res = await fetch('/api/table/get-tables');
           const data = await res.json();
@@ -317,7 +342,12 @@ const ReserveTable = () => {
                   ? 'bg-red-200' // 预订后变红色
                   : 'bg-green-200' // 默认青色
               }`}
-              onClick={() => handleReserveModal(table)}
+              onClick={() => {
+                // 如果表格未被禁用且未打开，则触发 handleReserveModal
+                if (!table.open.status && !disabledTables[table._id]) {
+                  handleReserveModal(table);
+                }
+              }}
             >
               <h3 className="text-lg font-semibold">{table.tablename}</h3>
               <p>Pax: {table.tablepax}</p>
