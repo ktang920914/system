@@ -14,6 +14,7 @@ import { IoMdTime } from "react-icons/io";
 import { TbReport } from "react-icons/tb";
 import { TbCashRegister } from "react-icons/tb";
 import { MdOutlineEventSeat } from "react-icons/md";
+import { IoReceiptOutline } from "react-icons/io5";
 
 const DashSidebar = () => {
   const location = useLocation();
@@ -129,6 +130,17 @@ const DashSidebar = () => {
                 as='div'
               >
                 Open Table
+              </Sidebar.Item>
+            </Link>
+
+            <Link to='/dashboard?tab=bill'>
+              <Sidebar.Item
+                active={tab === 'bill'}
+                icon={IoReceiptOutline}
+                labelColor='dark'
+                as='div'
+              >
+                Bill Payment
               </Sidebar.Item>
             </Link>
           </Sidebar.Collapse>

@@ -8,6 +8,7 @@ import Tables from '../components/Tables'
 import ReserveTable from '../components/ReserveTable'
 import ReserveReport from '../components/ReserveReport'
 import Cashier from '../components/Cashier'
+import Bill from '../components/Bill'
 
 const Dashboard = () => {
   
@@ -42,6 +43,8 @@ const Dashboard = () => {
         { tab === 'reserve-report' && <ReserveReport/>}
         {/* cashier */}
         { tab === 'cashier' && <Cashier/>}
+        {/* bill */}
+        { tab === 'bill' && <Bill/>}
     </div>
   )
 }

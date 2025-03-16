@@ -107,7 +107,7 @@ const Cashier = () => {
             <p className='text-sm'>Min Spent: RM{table.minimumspent}</p>
             <p className='text-sm'>Customer: {table.open.customername}</p>
             <p className='text-sm'>Phone: {table.open.phonenumber}</p>
-            <Badge color="failure" className="cursor-pointer" 
+            <Badge color="failure" className="cursor-pointer flex justify-center" 
                 onClick={() => handleCloseTable(table._id)}>Close
             </Badge>
           </Card>

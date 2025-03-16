@@ -37,3 +37,12 @@ export const updateUser = async (req,res,next) => {
         next(error)
     }
 }
+
+export const getUser = async (req,res,next) => {
+    try {
+        const users = await User.find().sort({updatedAt:-1})
+        res.status(200).json(users)
+    } catch (error) {
+        next(error)
+    }
+}
