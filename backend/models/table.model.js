@@ -66,6 +66,15 @@ const tableSchema = new mongoose.Schema({
             type:Date,
             default:null,
         },
+        customername:{
+            type:String,
+        },
+        phonenumber:{
+            type:String,
+        },
+        pax:{
+            type:Number,
+        },
     },
 },{timestamps:true})
 const Table = mongoose.model('Table', tableSchema)
