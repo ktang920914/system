@@ -14,7 +14,7 @@ const ReserveReport = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-gray-500 text-2xl font-semibold">Reports</h1>
         <div className='flex items-center gap-2'>
-        <TextInput type="date" id='datereport' onChange={handleChange}/>
+        <TextInput type="date" id='reportdate' onChange={handleChange}/>
         <Button>Report</Button>
         </div>
       </div>
