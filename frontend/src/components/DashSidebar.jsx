@@ -155,7 +155,7 @@ const DashSidebar = () => {
                 labelColor='dark'
                 as='div'
               >
-                New Product
+                Categorized
               </Sidebar.Item>
             </Link>
           </Sidebar.Collapse>

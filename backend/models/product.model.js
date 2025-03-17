@@ -1,34 +1,48 @@
 import mongoose from "mongoose";
 
+const subCategorySchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true,
+        unique: true,
+    },
+}, { timestamps: true });
+
+const SubCategory = mongoose.model('SubCategory', subCategorySchema);
+
 const productSchema = new mongoose.Schema({
-    productcategory:{
-        type:String,
-        enum:['Single','Combo'],
-        required:true,
+    productcategory: {
+        type: String,
+        enum: ['Single', 'Combo'],
     },
-    productname:{
-        type:String,
-        required:true,
-        unique:true,
+    productsub: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'SubCategory',
+        required: true,
     },
-    productimage:{
-        type:String,
-        default:'',
+    productname: {
+        type: String,
+        required: true,
+        unique: true,
     },
-    productprice:{
-        type:Number,
-        required:true,
+    productimage: {
+        type: String,
+        default: 'https://storage.googleapis.com/aafiyat2u-assets/product_cover.png',
     },
-    producttax:{
-        type:Number,
-        required:true,
+    productprice: {
+        type: Number,
+        required: true,
     },
-    quantity:{
-        type:Number,
-        required:true
+    producttax: {
+        type: Number,
+        required: true,
+    },
+    quantity: {
+        type: Number,
+        default: 0
     }
-},{timestamps:true})
+}, { timestamps: true });
 
-const Product = mongoose.model('Product', productSchema)
+const Product = mongoose.model('Product', productSchema);
 
-export default Product
+export { Product, SubCategory };
