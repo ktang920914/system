@@ -27,7 +27,7 @@ const productSchema = new mongoose.Schema({
     },
     productimage: {
         type: String,
-        default: 'https://storage.googleapis.com/aafiyat2u-assets/product_cover.png',
+        default: 'https://static.thenounproject.com/png/3850446-200.png',
     },
     productprice: {
         type: Number,

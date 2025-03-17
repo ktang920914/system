@@ -9,6 +9,7 @@ const Product = () => {
     const [openSubModal, setOpenSubModal] = useState(false);
     const [subCategories, setSubCategories] = useState([]);
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+    const [openEditModal, setOpenEditModal] = useState(false)
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 5;
@@ -157,6 +158,36 @@ const Product = () => {
         setCurrentPage(1); // 重置分页到第一页
     };
 
+    const handleDelete = async (productId) => {
+        try {
+            const res = await fetch(`/api/product/delete-product/${productId}`,{
+              method: 'DELETE',
+            })
+            const data = await res.json()
+            if(res.ok){
+              setProducts((prevProducts) => prevProducts.filter((product) => product._id !== productId))
+            }else{
+              console.log(data.message)
+            }
+          } catch (error) {
+            console.log(error.message)
+          }
+    }
+
+    const handleEditModal = () => {
+        setOpenEditModal(!openEditModal)
+        setErrorMessage(null)
+    }
+
+    const handleEditSubmit = async (e) => {
+        e.preventDefault()
+        try {
+            
+        } catch (error) {
+            setErrorMessage(error.message)
+        }
+    }
+
     const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
 
     const getPaginationData = () => {
@@ -212,7 +243,7 @@ const Product = () => {
                             <Table.Cell>{product.productname}</Table.Cell>
                             <Table.Cell>
                                 <img 
-                                    src={product.productimage || 'https://storage.googleapis.com/aafiyat2u-assets/product_cover.png'} 
+                                    src={product.productimage || 'https://static.thenounproject.com/png/3850446-200.png'} 
                                     alt={product.productname} 
                                     className="w-16 h-16 object-cover" 
                                 />
@@ -220,10 +251,10 @@ const Product = () => {
                             <Table.Cell>RM{product.productprice}</Table.Cell>
                             <Table.Cell>{product.producttax}%</Table.Cell>
                             <Table.Cell>
-                                <Button color="failure">Delete</Button>
+                                <Button color="failure" onClick={() => {handleDelete(product._id)}}>Delete</Button>
                             </Table.Cell>
                             <Table.Cell>
-                                <Button color="warning">Edit</Button>
+                                <Button color="warning"onClick={() => {handleEditModal()}}>Edit</Button>
                             </Table.Cell>
                         </Table.Row>
                     ))}
@@ -293,6 +324,35 @@ const Product = () => {
                             <div className='mt-4 mb-4'>
                                 <Label value='Sub Category Name' />
                                 <TextInput type='text' id='name' placeholder='Enter Sub Category Name'
+                                    onChange={handleChange} required />
+                            </div>
+                            <Button type='submit'>Submit</Button>
+                        </form>
+                    </div>
+                </Modal.Body>
+            </Modal>
+
+            <Modal show={openEditModal} size="xl" popup onClose={handleEditModal}>
+                <Modal.Header />
+                <Modal.Body>
+                    <div className="space-y-2">
+                        <h1 className="text-2xl text-gray-500 font-semibold">Update product</h1>
+                        {errorMessage && <Alert color='failure'>{errorMessage}</Alert>}
+                        <form onSubmit={handleEditSubmit}>
+                        <input hidden type='file' accept='image/*' id='productimage'/>
+                            <div className='mt-4'>
+                                <Label value='Product Name' />
+                                <TextInput type='text' id='productname' placeholder='Enter Product Name'
+                                    onChange={handleChange} required />
+                            </div>
+                            <div className='mt-4'>
+                                <Label value='Product Price (RM)' />
+                                <TextInput type='number' id='productprice' placeholder='Enter Product Price'
+                                    onChange={handleChange} required />
+                            </div>
+                            <div className='mt-4 mb-4'>
+                                <Label value='Product Tax %' />
+                                <TextInput type='number' id='producttax' placeholder='Enter Product Tax'
                                     onChange={handleChange} required />
                             </div>
                             <Button type='submit'>Submit</Button>
