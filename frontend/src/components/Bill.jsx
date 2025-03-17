@@ -1,4 +1,4 @@
-import { Button, Modal } from 'flowbite-react'
+import { Button, Label, Modal, Select, TextInput } from 'flowbite-react'
 import React, { useState } from 'react'
 
 const Bill = () => {
@@ -6,6 +6,15 @@ const Bill = () => {
   const [formData, setFormData] = useState({})
   const [openPaymentModal, setOpenPaymentModal] = useState(false)
   const [errorMessage, setErrorMessage] = useState(null)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      
+    } catch (error) {
+      setErrorMessage(error.message)
+    }
+  }
 
   const handleChange = (e) => {
     setFormData({...formData, [e.target.id]: e.target.value.trim()})
@@ -27,7 +36,7 @@ const Bill = () => {
       <Modal.Header />
       <Modal.Body>
         <div className="space-y-2">
-          <h1 className="text-2xl text-gray-500 font-semibold">Create area</h1>
+          <h1 className="text-2xl text-gray-500 font-semibold">Make payment</h1>
               {
                   errorMessage && (
                       <Alert color='failure'>
@@ -36,24 +45,23 @@ const Bill = () => {
                   )
               }
               <form onSubmit={handleSubmit}>
-                  <div className="mt-4">
-                      <Label value="Area" />
-                      <TextInput type='text' id="areaname" placeholder="A B C" onChange={handleChange} required/>
-                  </div>
-                  
-                  <div className="mt-4">
-                      <Label value="Description" />
-                      <TextInput type='text' id='description' placeholder='Enter your description' onChange={handleChange}/>
-                  </div>
-                  
-                  <div className='my-4'>
-                      <Label value='Category'/>
-                      <Select id="category" onChange={handleChange} required>
+                  <div className='mt-4'>
+                      <Label value='Payment Type'/>
+                      <Select id="paymenttype" onChange={handleChange} required>
                           <option value='Uncategory'>Select category</option>
-                          <option value='REGULAR'>REGULAR</option>
-                          <option value='VIP'>VIP</option>
-                          <option value='VVIP'>VVIP</option>
-                          <option value='SVIP'>SVIP</option>
+                          <option value='CASH'>CASH</option>
+                          <option value='CARD'>CARD</option>
+                          <option value='EWALLET'>EWALLET</option>
+                          <option value='BANK TRANSFER'>BANK TRANSFER</option>
+                      </Select>
+                  </div><div className='mt-4'>
+                      <Label value='Payment Providers/Networks'/>
+                      <Select id="paymenttype" onChange={handleChange} required>
+                          <option value='Uncategory'>Select category</option>
+                          <option value='REGULAR'>CASH</option>
+                          <option value='VIP'>CARD</option>
+                          <option value='VVIP'>EWALLET</option>
+                          <option value='SVIP'>BANK TRANSFER</option>
                       </Select>
                   </div>
                   <Button type='submit'>Submit</Button>

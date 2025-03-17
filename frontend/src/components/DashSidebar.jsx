@@ -15,6 +15,8 @@ import { TbReport } from "react-icons/tb";
 import { TbCashRegister } from "react-icons/tb";
 import { MdOutlineEventSeat } from "react-icons/md";
 import { IoReceiptOutline } from "react-icons/io5";
+import { AiOutlineGift } from "react-icons/ai";
+import { IoCreateOutline } from "react-icons/io5";
 
 const DashSidebar = () => {
   const location = useLocation();
@@ -141,6 +143,19 @@ const DashSidebar = () => {
                 as='div'
               >
                 Bill Payment
+              </Sidebar.Item>
+            </Link>
+          </Sidebar.Collapse>
+
+          <Sidebar.Collapse icon={AiOutlineGift} label="Product">
+            <Link to='/dashboard?tab=product'>
+              <Sidebar.Item
+                active={tab === 'product'}
+                icon={IoCreateOutline}
+                labelColor='dark'
+                as='div'
+              >
+                New Product
               </Sidebar.Item>
             </Link>
           </Sidebar.Collapse>

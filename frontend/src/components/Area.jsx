@@ -215,9 +215,9 @@ const Area = () => {
           <div className="space-y-2">
             <h1 className="text-2xl text-gray-500 font-semibold">Update area</h1>
                 {
-                    errorMessge && (
+                    errorMessage && (
                         <Alert color='failure'>
-                            {errorMessge}
+                            {errorMessage}
                         </Alert>
                     )
                 }
