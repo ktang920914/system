@@ -5,7 +5,7 @@ const Area = () => {
 
     const [openModal, setOpenModal] = useState(false)
     const [formData, setFormData] = useState({})
-    const [errorMessge, setErrorMessage] = useState(null)
+    const [errorMessage, setErrorMessage] = useState(null)
     const [areas, setAreas] = useState([])
     const [openEditModal, setOpenEditModal] = useState(false)
     const [selectedArea, setSelectedArea] = useState(null)
@@ -176,9 +176,9 @@ const Area = () => {
           <div className="space-y-2">
             <h1 className="text-2xl text-gray-500 font-semibold">Create area</h1>
                 {
-                    errorMessge && (
+                    errorMessage && (
                         <Alert color='failure'>
-                            {errorMessge}
+                            {errorMessage}
                         </Alert>
                     )
                 }

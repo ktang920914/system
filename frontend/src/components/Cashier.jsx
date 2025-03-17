@@ -89,7 +89,7 @@ const Cashier = () => {
   return (
     <div className='w-full max-w-5xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
       <div className='flex items-center justify-between'>
-        <h1 className='text-2xl font-semibold text-gray-500'>Open Table</h1>
+        <h1 className='text-2xl font-semibold text-gray-500'>Open Tables</h1>
         <Select id="areaFilter" onChange={handleAreaFilterChange} value={selectedArea}>
             <option value="">All Areas</option>
             {areas.map((area) => (

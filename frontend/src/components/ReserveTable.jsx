@@ -361,7 +361,7 @@ const ReserveTable = () => {
                     handleOpenTableModal(table); // 打开 Modal
                   }
                 }}
-                className="cursor-pointer"
+                className="cursor-pointer flex justify-center"
               >
                 {table.open.status ? 'Close' : 'Open'}
               </Badge>
