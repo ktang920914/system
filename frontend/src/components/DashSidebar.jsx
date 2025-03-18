@@ -196,6 +196,19 @@ const DashSidebar = () => {
             </Link>
           </Sidebar.Collapse>
 
+          <Sidebar.Collapse icon={AiOutlineGift} label="Inventory">
+            <Link to='/dashboard?tab=inventory'>
+                <Sidebar.Item
+                  active={tab === 'inventory'}
+                  icon={PiArrowsSplit}
+                  labelColor='dark'
+                  as='div'
+                >
+                  Stock
+                </Sidebar.Item>
+            </Link>
+          </Sidebar.Collapse>
+
           <Sidebar.Item onClick={handleSignOut} icon={HiArrowSmRight} className='cursor-pointer'>
             Sign Out
           </Sidebar.Item>

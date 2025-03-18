@@ -13,6 +13,7 @@ import Product from '../components/Product'
 import SubCategory from '../components/SubCategory'
 import Printer from '../components/Printer'
 import ProductPrinter from '../components/ProductPrinter'
+import Inventory from '../components/Inventory'
 
 const Dashboard = () => {
   
@@ -57,6 +58,8 @@ const Dashboard = () => {
         { tab === 'sub-category' && <SubCategory/>}
         {/* product printer */}
         { tab === 'product-printer' && <ProductPrinter/>}
+        {/* inventory */}
+        { tab === 'inventory' && <Inventory/>}
     </div>
   )
 }
