@@ -126,6 +126,11 @@ const Product = () => {
 
     const filteredProducts = React.useMemo(() => {
         return sortedProducts.filter(product => {
+            // 排除 sub category 为 N/A 的产品
+            if (product.productsub === 'N/A' || !product.productsub) {
+                return false;
+            }
+    
             const priceString = product.productprice?.toString() || '';
             const taxString = product.producttax?.toString() || '';
     
@@ -159,7 +164,19 @@ const Product = () => {
             });
             const data = await res.json();
             if (res.ok) {
-                setProducts((prevProducts) => prevProducts.filter((product) => product._id !== productId));
+                // 删除成功后重新获取产品数据
+                const fetchProducts = async () => {
+                    try {
+                        const res = await fetch('/api/product/get-products');
+                        const data = await res.json();
+                        if (res.ok) {
+                            setProducts(data);
+                        }
+                    } catch (error) {
+                        console.error(error);
+                    }
+                };
+                fetchProducts();
             } else {
                 console.log(data.message);
             }
@@ -215,7 +232,17 @@ const Product = () => {
     const getPaginationData = () => {
         const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
         const endIndex = startIndex + ITEMS_PER_PAGE;
-        return filteredProducts.slice(startIndex, endIndex);
+    
+        // 过滤掉 sub category 为 N/A 的产品
+        const validProducts = filteredProducts.filter(product => {
+            if (product.productsub === 'N/A' || !product.productsub) {
+                handleDelete(product._id); // 调用删除函数
+                return false; // 从列表中移除
+            }
+            return true;
+        });
+    
+        return validProducts.slice(startIndex, endIndex);
     };
 
     // 生成 Excel 报告的函数
@@ -278,31 +305,37 @@ const Product = () => {
                     <Table.HeadCell><span>Edit</span></Table.HeadCell>
                 </Table.Head>
                 <Table.Body>
-                    {getPaginationData().map((product) => (
-                        <Table.Row key={product._id}>
-                            <Table.Cell>{product.productcategory}</Table.Cell>
-                            <Table.Cell>
-                                {product.productsub ? product.productsub.name : 'N/A'}
-                            </Table.Cell>
-                            <Table.Cell>{product.productname}</Table.Cell>
-                            <Table.Cell>
-                                <img 
-                                    src={product.productimage ? URL.createObjectURL(product.productimage) : productImage} 
-                                    alt={product.productname} 
-                                    className="w-16 h-16 object-cover" 
-                                />
-                            </Table.Cell>
-                            <Table.Cell>RM{product.productprice}</Table.Cell>
-                            <Table.Cell>{product.producttax}%</Table.Cell>
-                            <Table.Cell>
-                                <Button color="failure" onClick={() => handleDelete(product._id)}>Delete</Button>
-                            </Table.Cell>
-                            <Table.Cell>
-                                <Button color="warning" onClick={() => handleEditModal(product)}>Edit</Button>
-                            </Table.Cell>
-                        </Table.Row>
-                    ))}
-                </Table.Body>
+                        {getPaginationData().map((product) => {
+                            // 如果 sub category 为 N/A，跳过渲染并触发删除
+                            if (product.productsub === 'N/A' || !product.productsub) {
+                                handleDelete(product._id);
+                                return null;
+                            }
+
+                            return (
+                                <Table.Row key={product._id}>
+                                    <Table.Cell>{product.productcategory}</Table.Cell>
+                                    <Table.Cell>{product.productsub ? product.productsub.name : 'N/A'}</Table.Cell>
+                                    <Table.Cell>{product.productname}</Table.Cell>
+                                    <Table.Cell>
+                                        <img 
+                                            src={product.productimage ? URL.createObjectURL(product.productimage) : productImage} 
+                                            alt={product.productname} 
+                                            className="w-16 h-16 object-cover" 
+                                        />
+                                    </Table.Cell>
+                                    <Table.Cell>RM{product.productprice}</Table.Cell>
+                                    <Table.Cell>{product.producttax}%</Table.Cell>
+                                    <Table.Cell>
+                                        <Button color="failure" onClick={() => handleDelete(product._id)}>Delete</Button>
+                                    </Table.Cell>
+                                    <Table.Cell>
+                                        <Button color="warning" onClick={() => handleEditModal(product)}>Edit</Button>
+                                    </Table.Cell>
+                                </Table.Row>
+                            );
+                        })}
+                    </Table.Body>
             </Table>
 
             <div className='flex justify-center mt-4'>

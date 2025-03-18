@@ -18,6 +18,8 @@ import { IoReceiptOutline } from "react-icons/io5";
 import { AiOutlineGift } from "react-icons/ai";
 import { IoCreateOutline } from "react-icons/io5";
 import { PiArrowsSplit } from "react-icons/pi";
+import { BsPrinter } from "react-icons/bs";
+import { TiPrinter } from "react-icons/ti";
 
 const DashSidebar = () => {
   const location = useLocation();
@@ -98,6 +100,17 @@ const DashSidebar = () => {
                 Table
               </Sidebar.Item>
             </Link>
+
+            <Link to='/dashboard?tab=printer'>
+              <Sidebar.Item
+                active={tab === 'printer'}
+                icon={BsPrinter}
+                labelColor='dark'
+                as='div'
+              >
+                Printer
+              </Sidebar.Item>
+            </Link>
           </Sidebar.Collapse>
 
           <Sidebar.Collapse icon={SlCalender} label="Reservation">
@@ -168,6 +181,17 @@ const DashSidebar = () => {
                 as='div'
               >
                 Sub Category
+              </Sidebar.Item>
+            </Link>
+
+            <Link to='/dashboard?tab=product-printer'>
+              <Sidebar.Item
+                active={tab === 'product-printer'}
+                icon={TiPrinter}
+                labelColor='dark'
+                as='div'
+              >
+                Product Printer
               </Sidebar.Item>
             </Link>
           </Sidebar.Collapse>

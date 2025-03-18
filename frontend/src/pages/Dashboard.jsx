@@ -11,6 +11,8 @@ import Cashier from '../components/Cashier'
 import Bill from '../components/Bill'
 import Product from '../components/Product'
 import SubCategory from '../components/SubCategory'
+import Printer from '../components/Printer'
+import ProductPrinter from '../components/ProductPrinter'
 
 const Dashboard = () => {
   
@@ -39,6 +41,8 @@ const Dashboard = () => {
         { tab === 'area' && <Area/>}
         {/* table */}
         { tab === 'table' && <Tables/>}
+        {/* printer */}
+        { tab === 'printer' && <Printer/>}
         {/* reserve */}
         { tab === 'reserve' && <ReserveTable/>}
         {/* reserve-report */}
@@ -51,6 +55,8 @@ const Dashboard = () => {
         { tab === 'product' && <Product/>}
         {/* sub category */}
         { tab === 'sub-category' && <SubCategory/>}
+        {/* product printer */}
+        { tab === 'product-printer' && <ProductPrinter/>}
     </div>
   )
 }
