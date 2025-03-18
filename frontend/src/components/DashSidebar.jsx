@@ -206,7 +206,7 @@ const DashSidebar = () => {
                   labelColor='dark'
                   as='div'
                 >
-                  Stock
+                  Warehouse
                 </Sidebar.Item>
             </Link>
           </Sidebar.Collapse>
