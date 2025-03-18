@@ -10,6 +10,9 @@ const ProductPrinter = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(7); // Number of items per page
 
+  // State to track selected printer for each product
+  const [selectedPrinters, setSelectedPrinters] = useState({});
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -32,6 +35,12 @@ const ProductPrinter = () => {
         const productData = await productRes.json();
         if (productRes.ok) {
           setProducts(productData);
+          // Initialize selectedPrinters state with current productprinter values
+          const initialSelectedPrinters = {};
+          productData.forEach((product) => {
+            initialSelectedPrinters[product._id] = product.productprinter || '';
+          });
+          setSelectedPrinters(initialSelectedPrinters);
         }
       } catch (error) {
         console.error(error);
@@ -49,6 +58,45 @@ const ProductPrinter = () => {
   const handlePrinterFilterChange = (e) => {
     setSelectedPrinter(e.target.value);
     setCurrentPage(1);
+  };
+
+  // Handle Pair button click
+  const handlePair = async (productId) => {
+    const selectedPrinter = selectedPrinters[productId];
+    if (!selectedPrinter) {
+      alert('Please select a printer before pairing.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/product/update-product/${productId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ productprinter: selectedPrinter }),
+      });
+
+      if (res.ok) {
+        // Refresh data after successful update
+        const updatedProducts = products.map((product) =>
+          product._id === productId ? { ...product, productprinter: selectedPrinter } : product
+        );
+        setProducts(updatedProducts);
+      } else {
+        console.error('Failed to update product printer');
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // Handle printer selection change for a specific product
+  const handlePrinterSelectionChange = (productId, value) => {
+    setSelectedPrinters((prev) => ({
+      ...prev,
+      [productId]: value,
+    }));
   };
 
   // Filter products based on selected subcategory and printer
@@ -94,6 +142,7 @@ const ProductPrinter = () => {
         <Table.Head>
           <Table.HeadCell>Product</Table.HeadCell>
           <Table.HeadCell>Sub Category</Table.HeadCell>
+          <Table.HeadCell>Pair status</Table.HeadCell>
           <Table.HeadCell>Printer</Table.HeadCell>
           <Table.HeadCell>Pair</Table.HeadCell>
         </Table.Head>
@@ -103,7 +152,15 @@ const ProductPrinter = () => {
               <Table.Cell>{product.productname}</Table.Cell>
               <Table.Cell>{product.productsub.name}</Table.Cell>
               <Table.Cell>
-                <Select defaultValue={product.productprinter}>
+                <div className={product.productprinter ? 'text-green-500' : ''}>
+                  {product.productprinter || 'Not Paired'}
+                </div>
+              </Table.Cell>
+              <Table.Cell>
+                <Select
+                  value={selectedPrinters[product._id] || ''}
+                  onChange={(e) => handlePrinterSelectionChange(product._id, e.target.value)}
+                >
                   <option value=''>Select Printer</option>
                   {printers.map((printer) => (
                     <option key={printer._id} value={printer.printername}>
@@ -113,7 +170,9 @@ const ProductPrinter = () => {
                 </Select>
               </Table.Cell>
               <Table.Cell>
-                <Button color='warning'>Pair</Button>
+                <Button color='warning' onClick={() => handlePair(product._id)}>
+                  Pair
+                </Button>
               </Table.Cell>
             </Table.Row>
           ))}

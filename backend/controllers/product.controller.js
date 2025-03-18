@@ -83,12 +83,13 @@ export const deleteProduct = async (req,res,next) => {
 export const updateProduct = async (req,res,next) => {
     try {
         const {productId} = req.params;
-        const { productname, productprice, producttax } = req.body;
+        const { productname, productprice, producttax, productprinter } = req.body;
 
         let updateData = {
             productname,
             productprice,
             producttax,
+            productprinter
         };
 
         const updatedProduct = await Product.findByIdAndUpdate(productId, updateData, { new: true });
