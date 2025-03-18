@@ -1,4 +1,5 @@
 import Area from "../models/area.model.js"
+import Printer from "../models/printer.model.js"
 import Table from "../models/table.model.js"
 import { errorHandler } from "../utils/error.js"
 
@@ -43,6 +44,10 @@ export const deleteArea = async (req, res, next) => {
         }
 
         await Table.deleteMany({ area: areaId})
+        await Printer.updateMany(
+            { areas: deletedArea.areaname },
+            { $pull: { areas: deletedArea.areaname } }
+        );
 
         await Area.findByIdAndDelete(areaId)
 

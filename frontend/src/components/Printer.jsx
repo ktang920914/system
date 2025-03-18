@@ -12,31 +12,31 @@ const Printer = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 7;
 
+    const fetchPrinters = async () => {
+        try {
+            const res = await fetch('/api/printer/get-printers');
+            const data = await res.json();
+            if (res.ok) {
+                setPrinters(data);
+            }
+        } catch (error) {
+            console.log(error.message);
+        }
+    };
+
+    const fetchAreas = async () => {
+        try {
+            const res = await fetch('/api/area/get-areas');
+            const data = await res.json();
+            if (res.ok) {
+                setAreas(data);
+            }
+        } catch (error) {
+            console.log(error.message);
+        }
+    };
+
     useEffect(() => {
-        const fetchPrinters = async () => {
-            try {
-                const res = await fetch('/api/printer/get-printers');
-                const data = await res.json();
-                if (res.ok) {
-                    setPrinters(data);
-                }
-            } catch (error) {
-                console.log(error.message);
-            }
-        };
-
-        const fetchAreas = async () => {
-            try {
-                const res = await fetch('/api/area/get-areas');
-                const data = await res.json();
-                if (res.ok) {
-                    setAreas(data);
-                }
-            } catch (error) {
-                console.log(error.message);
-            }
-        };
-
         fetchPrinters();
         fetchAreas();
     }, []);
@@ -66,11 +66,7 @@ const Printer = () => {
             if (res.ok) {
                 setOpenModal(false);
                 setErrorMessage(null);
-                const res = await fetch('/api/printer/get-printers');
-                const data = await res.json();
-                if (res.ok) {
-                    setPrinters(data);
-                }
+                fetchPrinters();
             }
         } catch (error) {
             setErrorMessage(error.message);
@@ -89,8 +85,7 @@ const Printer = () => {
             if (res.ok) {
                 setOpenEditModal(false);
                 setErrorMessage(null);
-                const updatedPrinters = printers.map(printer => printer._id === selectedPrinter._id ? data : printer);
-                setPrinters(updatedPrinters);
+                fetchPrinters();
             } else {
                 setErrorMessage(data.message);
             }
@@ -106,7 +101,7 @@ const Printer = () => {
             });
             const data = await res.json();
             if (res.ok) {
-                setPrinters((prevPrinters) => prevPrinters.filter((printer) => printer._id !== printerId));
+                fetchPrinters();
             } else {
                 console.log(data.message);
             }
@@ -123,9 +118,9 @@ const Printer = () => {
     };
 
     const handleClick = () => {
-      setOpenModal(!openModal)
-      setErrorMessage(null)
-    }
+        setOpenModal(!openModal);
+        setErrorMessage(null);
+    };
 
     const totalPages = Math.ceil(printers.length / ITEMS_PER_PAGE);
 
@@ -139,7 +134,7 @@ const Printer = () => {
         <div className='w-full max-w-3xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
             <div className='flex items-center justify-between'>
                 <h1 className='text-gray-500 font-semibold text-2xl'>Printers</h1>
-                <Button onClick={() => {handleClick()}}>Create Printer</Button>
+                <Button onClick={handleClick}>Create Printer</Button>
             </div>
 
             <Table hoverable className='shadow-md mt-4'>
