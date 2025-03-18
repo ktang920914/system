@@ -1,5 +1,7 @@
 import { Product, SubCategory } from "../models/product.model.js";
 import { errorHandler } from "../utils/error.js";
+import fs from 'fs';
+import path from 'path';
 
 export const createProduct = async (req, res, next) => {
     try {
@@ -75,5 +77,33 @@ export const deleteProduct = async (req,res,next) => {
         res.status(200).json({message:'Deleted product successfully'})
     } catch (error) {
         next(error)
+    }
+}
+
+export const updateProduct = async (req,res,next) => {
+    try {
+        const {productId} = req.params;
+        const { productname, productprice, producttax } = req.body;
+
+        let updateData = {
+            productname,
+            productprice,
+            producttax,
+        };
+
+        if (req.file) {
+            const imagePath = path.join(__dirname, '../uploads', req.file.filename);
+            updateData.productimage = imagePath;
+        }
+
+        const updatedProduct = await Product.findByIdAndUpdate(productId, updateData, { new: true });
+
+        if (!updatedProduct) {
+            return next(errorHandler(404, 'Product not found'));
+        }
+
+        res.status(200).json(updatedProduct);
+    } catch (error) {
+        next(error);
     }
 }

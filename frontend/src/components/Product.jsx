@@ -1,5 +1,6 @@
-import { Alert, Button, Label, Modal, Pagination, Select, Table, TextInput } from 'flowbite-react';
+import { Alert, Button, FileInput, Label, Modal, Pagination, Select, Table, TextInput } from 'flowbite-react';
 import React, { useState, useEffect } from 'react';
+import productImage from '../assets/productImage.png';
 
 const Product = () => {
     const [formData, setFormData] = useState({});
@@ -9,9 +10,10 @@ const Product = () => {
     const [openSubModal, setOpenSubModal] = useState(false);
     const [subCategories, setSubCategories] = useState([]);
     const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
-    const [openEditModal, setOpenEditModal] = useState(false)
+    const [openEditModal, setOpenEditModal] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+    const [selectedProduct, setSelectedProduct] = useState(null);
     const ITEMS_PER_PAGE = 5;
 
     useEffect(() => {
@@ -70,13 +72,8 @@ const Product = () => {
                 const subCategory = subCategories.find(sub => sub._id === formData.productsub);
                 data.productsub = subCategory;
 
-                // 将新产品添加到 products 数组的开头
                 setProducts(prev => [data, ...prev]);
-
-                // 重置分页到第一页
                 setCurrentPage(1);
-
-                // 关闭模态框并清空错误消息
                 setOpenProductModal(false);
                 setErrorMessage(null);
             } else {
@@ -121,7 +118,6 @@ const Product = () => {
                 return 0;
             });
         } else {
-            // 默认按创建时间降序排列（新产品在前）
             sortableProducts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         }
         return sortableProducts;
@@ -129,18 +125,15 @@ const Product = () => {
 
     const filteredProducts = React.useMemo(() => {
         return sortedProducts.filter(product => {
-            // 将价格和税率转换为字符串，以便进行关键字匹配
-            const priceString = product.productprice.toString();
-            const taxString = product.producttax.toString();
-
-            // 匹配名称、类别、子类别、价格和税率
-            const matchesName = product.productname.toLowerCase().includes(searchQuery);
-            const matchesCategory = product.productcategory.toLowerCase().includes(searchQuery);
-            const matchesSubCategory = product.productsub ? product.productsub.name.toLowerCase().includes(searchQuery) : false;
-            const matchesPrice = priceString.includes(searchQuery); // 匹配价格
-            const matchesTax = taxString.includes(searchQuery); // 匹配税率
-
-            // 综合条件
+            const priceString = product.productprice?.toString() || '';
+            const taxString = product.producttax?.toString() || '';
+    
+            const matchesName = product.productname?.toLowerCase().includes(searchQuery) || false;
+            const matchesCategory = product.productcategory?.toLowerCase().includes(searchQuery) || false;
+            const matchesSubCategory = product.productsub?.name?.toLowerCase().includes(searchQuery) || false;
+            const matchesPrice = priceString.includes(searchQuery);
+            const matchesTax = taxString.includes(searchQuery);
+    
             return matchesName || matchesCategory || matchesSubCategory || matchesPrice || matchesTax;
         });
     }, [sortedProducts, searchQuery]);
@@ -155,38 +148,79 @@ const Product = () => {
 
     const handleSearchChange = (e) => {
         setSearchQuery(e.target.value.trim().toLowerCase());
-        setCurrentPage(1); // 重置分页到第一页
+        setCurrentPage(1);
     };
 
     const handleDelete = async (productId) => {
         try {
-            const res = await fetch(`/api/product/delete-product/${productId}`,{
-              method: 'DELETE',
-            })
-            const data = await res.json()
-            if(res.ok){
-              setProducts((prevProducts) => prevProducts.filter((product) => product._id !== productId))
-            }else{
-              console.log(data.message)
+            const res = await fetch(`/api/product/delete-product/${productId}`, {
+                method: 'DELETE',
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setProducts((prevProducts) => prevProducts.filter((product) => product._id !== productId));
+            } else {
+                console.log(data.message);
             }
-          } catch (error) {
-            console.log(error.message)
-          }
-    }
+        } catch (error) {
+            console.log(error.message);
+        }
+    };
 
-    const handleEditModal = () => {
-        setOpenEditModal(!openEditModal)
-        setErrorMessage(null)
-    }
+    const handleEditModal = (product) => {
+        setSelectedProduct(product);
+        setOpenEditModal(!openEditModal);
+        setErrorMessage(null);
+    };
 
     const handleEditSubmit = async (e) => {
-        e.preventDefault()
+        e.preventDefault();
         try {
-            
+            const formData = new FormData();
+            formData.append('productname', selectedProduct.productname);
+            formData.append('productprice', selectedProduct.productprice);
+            formData.append('producttax', selectedProduct.producttax);
+            if (selectedProduct.productimage) {
+                formData.append('productimage', selectedProduct.productimage);
+            }
+    
+            const res = await fetch(`/api/product/update-product/${selectedProduct._id}`, {
+                method: 'PUT',
+                body: formData,
+            });
+            const data = await res.json();
+            if (res.ok) {
+                // 确保返回的数据包含子分类信息
+                const updatedProduct = {
+                    ...data,
+                    productsub: subCategories.find(sub => sub._id === selectedProduct.productsub?._id),
+                };
+    
+                // 更新产品列表
+                setProducts(prevProducts => prevProducts.map(product => 
+                    product._id === selectedProduct._id ? updatedProduct : product
+                ));
+    
+                setOpenEditModal(false);
+                setErrorMessage(null);
+            } else {
+                setErrorMessage(data.message);
+            }
         } catch (error) {
-            setErrorMessage(error.message)
+            setErrorMessage(error.message);
+            console.log(error.message);
         }
-    }
+    };
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setSelectedProduct(prev => ({
+                ...prev,
+                productimage: file
+            }));
+        }
+    };
 
     const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
 
@@ -234,31 +268,31 @@ const Product = () => {
                     <Table.HeadCell><span>Edit</span></Table.HeadCell>
                 </Table.Head>
                 <Table.Body>
-                    {getPaginationData().map((product) => (
-                        <Table.Row key={product._id}>
-                            <Table.Cell>{product.productcategory}</Table.Cell>
-                            <Table.Cell>
-                                {product.productsub ? product.productsub.name : 'N/A'}
-                            </Table.Cell>
-                            <Table.Cell>{product.productname}</Table.Cell>
-                            <Table.Cell>
-                                <img 
-                                    src={product.productimage || 'https://static.thenounproject.com/png/3850446-200.png'} 
-                                    alt={product.productname} 
-                                    className="w-16 h-16 object-cover" 
-                                />
-                            </Table.Cell>
-                            <Table.Cell>RM{product.productprice}</Table.Cell>
-                            <Table.Cell>{product.producttax}%</Table.Cell>
-                            <Table.Cell>
-                                <Button color="failure" onClick={() => {handleDelete(product._id)}}>Delete</Button>
-                            </Table.Cell>
-                            <Table.Cell>
-                                <Button color="warning"onClick={() => {handleEditModal()}}>Edit</Button>
-                            </Table.Cell>
-                        </Table.Row>
-                    ))}
-                </Table.Body>
+    {getPaginationData().map((product) => (
+        <Table.Row key={product._id}>
+            <Table.Cell>{product.productcategory}</Table.Cell>
+            <Table.Cell>
+                {product.productsub ? product.productsub.name : 'N/A'}
+            </Table.Cell>
+            <Table.Cell>{product.productname}</Table.Cell>
+            <Table.Cell>
+                <img 
+                    src={product.productimage ? URL.createObjectURL(product.productimage) : productImage} 
+                    alt={product.productname} 
+                    className="w-16 h-16 object-cover" 
+                />
+            </Table.Cell>
+            <Table.Cell>RM{product.productprice}</Table.Cell>
+            <Table.Cell>{product.producttax}%</Table.Cell>
+            <Table.Cell>
+                <Button color="failure" onClick={() => handleDelete(product._id)}>Delete</Button>
+            </Table.Cell>
+            <Table.Cell>
+                <Button color="warning" onClick={() => handleEditModal(product)}>Edit</Button>
+            </Table.Cell>
+        </Table.Row>
+    ))}
+</Table.Body>
             </Table>
 
             <div className='flex justify-center mt-4'>
@@ -332,28 +366,46 @@ const Product = () => {
                 </Modal.Body>
             </Modal>
 
-            <Modal show={openEditModal} size="xl" popup onClose={handleEditModal}>
+            <Modal show={openEditModal} size="xl" popup onClose={() => {
+                setOpenEditModal(false);
+                setSelectedProduct(null);
+                setErrorMessage(null);
+            }}>
                 <Modal.Header />
                 <Modal.Body>
                     <div className="space-y-2">
                         <h1 className="text-2xl text-gray-500 font-semibold">Update product</h1>
                         {errorMessage && <Alert color='failure'>{errorMessage}</Alert>}
                         <form onSubmit={handleEditSubmit}>
-                        <input hidden type='file' accept='image/*' id='productimage'/>
+                            <div className='mt-4'>
+                                <div>
+                                    <Label value='Product Image'/>
+                                </div>
+                                <FileInput type='file' accept='image/*' id='productimage' sizing='sm' onChange={handleImageChange} />
+                            </div>
                             <div className='mt-4'>
                                 <Label value='Product Name' />
                                 <TextInput type='text' id='productname' placeholder='Enter Product Name'
-                                    onChange={handleChange} required />
+                                    value={selectedProduct?.productname || ''}
+                                    onChange={(e) => setSelectedProduct(prev => ({ ...prev, productname: e.target.value }))}
+                                    required
+                                />
                             </div>
                             <div className='mt-4'>
                                 <Label value='Product Price (RM)' />
                                 <TextInput type='number' id='productprice' placeholder='Enter Product Price'
-                                    onChange={handleChange} required />
+                                    value={selectedProduct?.productprice || ''}
+                                    onChange={(e) => setSelectedProduct(prev => ({ ...prev, productprice: e.target.value }))}
+                                    required
+                                />
                             </div>
                             <div className='mt-4 mb-4'>
                                 <Label value='Product Tax %' />
                                 <TextInput type='number' id='producttax' placeholder='Enter Product Tax'
-                                    onChange={handleChange} required />
+                                    value={selectedProduct?.producttax || ''}
+                                    onChange={(e) => setSelectedProduct(prev => ({ ...prev, producttax: e.target.value }))}
+                                    required
+                                />
                             </div>
                             <Button type='submit'>Submit</Button>
                         </form>
