@@ -17,6 +17,7 @@ import { MdOutlineEventSeat } from "react-icons/md";
 import { IoReceiptOutline } from "react-icons/io5";
 import { AiOutlineGift } from "react-icons/ai";
 import { IoCreateOutline } from "react-icons/io5";
+import { PiArrowsSplit } from "react-icons/pi";
 
 const DashSidebar = () => {
   const location = useLocation();
@@ -156,6 +157,17 @@ const DashSidebar = () => {
                 as='div'
               >
                 Categorized
+              </Sidebar.Item>
+            </Link>
+
+            <Link to='/dashboard?tab=sub-category'>
+              <Sidebar.Item
+                active={tab === 'sub-category'}
+                icon={PiArrowsSplit}
+                labelColor='dark'
+                as='div'
+              >
+                Sub Category
               </Sidebar.Item>
             </Link>
           </Sidebar.Collapse>

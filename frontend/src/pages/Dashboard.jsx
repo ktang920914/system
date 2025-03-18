@@ -10,6 +10,7 @@ import ReserveReport from '../components/ReserveReport'
 import Cashier from '../components/Cashier'
 import Bill from '../components/Bill'
 import Product from '../components/Product'
+import SubCategory from '../components/SubCategory'
 
 const Dashboard = () => {
   
@@ -46,8 +47,10 @@ const Dashboard = () => {
         { tab === 'cashier' && <Cashier/>}
         {/* bill */}
         { tab === 'bill' && <Bill/>}
-        {/* Product */}
+        {/* product */}
         { tab === 'product' && <Product/>}
+        {/* sub category */}
+        { tab === 'sub-category' && <SubCategory/>}
     </div>
   )
 }
