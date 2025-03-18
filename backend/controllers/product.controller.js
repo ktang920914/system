@@ -106,16 +106,22 @@ export const updateProduct = async (req,res,next) => {
     }
 }
 
-export const deleteSubCategory = async (req,res,next) => {
+export const deleteSubCategory = async (req, res, next) => {
     try {
         const { subcategoryId } = req.params;
-        // Assuming you have a model named SubCategory
+
+        // 删除与该 SubCategory 关联的所有 Product
+        await Product.deleteMany({ productsub: subcategoryId });
+
+        // 删除 SubCategory
         const deletedSubCategory = await SubCategory.findByIdAndDelete(subcategoryId);
+
         if (!deletedSubCategory) {
             return res.status(404).json({ message: 'SubCategory not found' });
         }
-        res.status(200).json({ message: 'SubCategory deleted successfully' });
+
+        res.status(200).json({ message: 'SubCategory and associated products deleted successfully' });
     } catch (error) {
-        next(error)
+        next(error);
     }
-}
+};

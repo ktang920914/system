@@ -78,7 +78,7 @@ const ReserveReport = () => {
   return (
     <div className="w-full max-w-5xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300">
       <div className="flex items-center justify-between">
-        <h1 className="text-gray-500 text-2xl font-semibold">Reports</h1>
+        <h1 className="text-gray-500 text-2xl font-semibold sm:block hidden">Reports</h1>
         <form className='flex items-center gap-2' onSubmit={handleSubmit}>
           <Label value='Start Date :' />
           <TextInput type="date" id='startDate' onChange={handleChange} required />

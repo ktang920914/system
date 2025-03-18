@@ -162,6 +162,17 @@ const DashSidebar = () => {
           </Sidebar.Collapse>
 
           <Sidebar.Collapse icon={AiOutlineGift} label="Product">
+            <Link to='/dashboard?tab=sub-category'>
+                <Sidebar.Item
+                  active={tab === 'sub-category'}
+                  icon={PiArrowsSplit}
+                  labelColor='dark'
+                  as='div'
+                >
+                  Categorized
+                </Sidebar.Item>
+            </Link>
+
             <Link to='/dashboard?tab=product'>
               <Sidebar.Item
                 active={tab === 'product'}
@@ -169,18 +180,7 @@ const DashSidebar = () => {
                 labelColor='dark'
                 as='div'
               >
-                Categorized
-              </Sidebar.Item>
-            </Link>
-
-            <Link to='/dashboard?tab=sub-category'>
-              <Sidebar.Item
-                active={tab === 'sub-category'}
-                icon={PiArrowsSplit}
-                labelColor='dark'
-                as='div'
-              >
-                Sub Category
+                Product Info
               </Sidebar.Item>
             </Link>
 

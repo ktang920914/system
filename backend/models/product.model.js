@@ -39,7 +39,11 @@ const productSchema = new mongoose.Schema({
     },
     quantity: {
         type: Number,
-        default: 0
+        default: 0,
+    },
+    productprinter:{
+        type:String,
+        default:''
     }
 }, { timestamps: true });
 

@@ -272,8 +272,8 @@ const Product = () => {
                     onChange={handleSearchChange}
                 />
                 <div className='flex items-center gap-2'>
-                    <Button onClick={handleProductModal}>Create product</Button>
-                    <Button onClick={handleSubModal}>Create Subcategory</Button>
+                    <Button onClick={handleProductModal}>Product</Button>
+                    <Button onClick={handleSubModal}>Subcategory</Button>
                     <Button 
                         onClick={generateExcelReport} 
                         disabled={filteredProducts.length === 0} // 当表格没有数据时禁用按钮
