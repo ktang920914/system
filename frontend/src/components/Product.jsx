@@ -378,12 +378,12 @@ const Product = () => {
                             <div className='mt-4'>
                                 <Label value='Product Price (RM)' />
                                 <TextInput type='number' id='productprice' placeholder='Enter Product Price'
-                                    onChange={handleChange} required />
+                                    step={0.1} onChange={handleChange} required />
                             </div>
                             <div className='mt-4 mb-4'>
                                 <Label value='Product Tax %' />
                                 <TextInput type='number' id='producttax' placeholder='Enter Product Tax'
-                                    onChange={handleChange} required />
+                                    step={0.1} onChange={handleChange} required />
                             </div>
                             <Button type='submit'>Submit</Button>
                         </form>
@@ -432,7 +432,7 @@ const Product = () => {
                                 <Label value='Product Price (RM)' />
                                 <TextInput type='number' id='productprice' placeholder='Enter Product Price'
                                     value={selectedProduct?.productprice || ''}
-                                    onChange={(e) => setSelectedProduct(prev => ({ ...prev, productprice: e.target.value }))}
+                                     step={0.1} onChange={(e) => setSelectedProduct(prev => ({ ...prev, productprice: e.target.value }))}
                                     required
                                 />
                             </div>
@@ -440,7 +440,7 @@ const Product = () => {
                                 <Label value='Product Tax %' />
                                 <TextInput type='number' id='producttax' placeholder='Enter Product Tax'
                                     value={selectedProduct?.producttax || ''}
-                                    onChange={(e) => setSelectedProduct(prev => ({ ...prev, producttax: e.target.value }))}
+                                    step={0.1} onChange={(e) => setSelectedProduct(prev => ({ ...prev, producttax: e.target.value }))}
                                     required
                                 />
                             </div>

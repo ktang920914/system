@@ -1,4 +1,4 @@
-import { Button } from 'flowbite-react'
+import { Button, Table } from 'flowbite-react'
 import React from 'react'
 
 const Inventory = () => {
@@ -8,6 +8,16 @@ const Inventory = () => {
             <h1 className='text-2xl font-semibold text-gray-500'>Warehouse</h1>
             <Button>Create warehouse</Button>
         </div>
+
+        <Table hoverable className='shadow-md mt-4'>
+          <Table.Head>
+            <Table.HeadCell>Warehouse</Table.HeadCell>
+            <Table.HeadCell>Description</Table.HeadCell>
+            <Table.HeadCell></Table.HeadCell>
+            <Table.HeadCell>Delete</Table.HeadCell>
+            <Table.HeadCell><span>Edit</span></Table.HeadCell>
+          </Table.Head>
+        </Table>
     </div>
   )
 }

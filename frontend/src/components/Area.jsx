@@ -190,7 +190,8 @@ const Area = () => {
                     
                     <div className="mt-4">
                         <Label value="Description" />
-                        <TextInput type='text' id='description' placeholder='Enter your description' onChange={handleChange}/>
+                        <TextInput type='text' id='description' placeholder='Enter your description' onChange={handleChange}
+                        maxLength={15}/>
                     </div>
                     
                     <div className='my-4'>
@@ -231,7 +232,7 @@ const Area = () => {
                     <div className="mt-4">
                         <Label value="Description" />
                         <TextInput type='text' id='description' placeholder='Enter your description' onChange={handleChange}
-                        value={formData.description}/>
+                        value={formData.description} maxLength={15}/>
                     </div>
                     
                     <div className='my-4'>
