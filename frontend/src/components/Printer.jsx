@@ -214,14 +214,6 @@ const Printer = () => {
                         {errorMessage && <Alert color='failure'>{errorMessage}</Alert>}
                         <form onSubmit={handleEditSubmit}>
                             <div className="mt-4">
-                                <Label value="Printer Name" />
-                                <TextInput type='text' id="printername" placeholder="Printer Name" onChange={handleChange} value={formData.printername} required />
-                            </div>
-                            <div className="mt-4">
-                                <Label value="Printer IP" />
-                                <TextInput type='text' id="printerip" placeholder="192.168.1.1" onChange={handleChange} value={formData.printerip} required />
-                            </div>
-                            <div className="mt-4">
                                 <Label value="Areas" />
                                 <Select id="areas" multiple onChange={handleAreaChange} value={formData.areas} required>
                                     {areas.map((area) => (

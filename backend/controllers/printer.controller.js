@@ -56,23 +56,9 @@ export const deletePrinter = async (req, res, next) => {
 export const updatePrinter = async (req, res, next) => {
     try {
         const { printerId } = req.params;
-        const { printername, printerip, areas } = req.body;
-
-        const existingPrintername = await Printer.findOne({ printername })
-        
-        if(existingPrintername){
-            return next(errorHandler(400, 'Printer name already exists'))
-        }
-
-        const existingPrinterIP = await Printer.findOne({ printerip })
-        
-        if(existingPrinterIP){
-            return next(errorHandler(400, 'Printer IP already exists'))
-        }
+        const { areas } = req.body;
 
         const updatedPrinter = await Printer.findByIdAndUpdate(printerId, {
-            printername,
-            printerip,
             areas,
         }, { new: true });
 
