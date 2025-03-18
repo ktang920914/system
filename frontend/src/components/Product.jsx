@@ -176,17 +176,14 @@ const Product = () => {
     const handleEditSubmit = async (e) => {
         e.preventDefault();
         try {
-            const formData = new FormData();
-            formData.append('productname', selectedProduct.productname);
-            formData.append('productprice', selectedProduct.productprice);
-            formData.append('producttax', selectedProduct.producttax);
-            if (selectedProduct.productimage) {
-                formData.append('productimage', selectedProduct.productimage);
-            }
-    
             const res = await fetch(`/api/product/update-product/${selectedProduct._id}`, {
                 method: 'PUT',
-                body: formData,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    productname: selectedProduct.productname,
+                    productprice: selectedProduct.productprice,
+                    producttax: selectedProduct.producttax,
+                }),
             });
             const data = await res.json();
             if (res.ok) {
@@ -204,21 +201,11 @@ const Product = () => {
                 setOpenEditModal(false);
                 setErrorMessage(null);
             } else {
-                setErrorMessage(data.message);
+                setErrorMessage(data.message || 'Product name already exists');
             }
         } catch (error) {
             setErrorMessage(error.message);
             console.log(error.message);
-        }
-    };
-
-    const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setSelectedProduct(prev => ({
-                ...prev,
-                productimage: file
-            }));
         }
     };
 
@@ -377,12 +364,6 @@ const Product = () => {
                         <h1 className="text-2xl text-gray-500 font-semibold">Update product</h1>
                         {errorMessage && <Alert color='failure'>{errorMessage}</Alert>}
                         <form onSubmit={handleEditSubmit}>
-                            <div className='mt-4'>
-                                <div>
-                                    <Label value='Product Image'/>
-                                </div>
-                                <FileInput type='file' accept='image/*' id='productimage' sizing='sm' onChange={handleImageChange} />
-                            </div>
                             <div className='mt-4'>
                                 <Label value='Product Name' />
                                 <TextInput type='text' id='productname' placeholder='Enter Product Name'

@@ -91,11 +91,6 @@ export const updateProduct = async (req,res,next) => {
             producttax,
         };
 
-        if (req.file) {
-            const imagePath = path.join(__dirname, '../uploads', req.file.filename);
-            updateData.productimage = imagePath;
-        }
-
         const updatedProduct = await Product.findByIdAndUpdate(productId, updateData, { new: true });
 
         if (!updatedProduct) {
@@ -104,6 +99,9 @@ export const updateProduct = async (req,res,next) => {
 
         res.status(200).json(updatedProduct);
     } catch (error) {
+        if (error.code === 11000) {
+            return next(errorHandler(400, 'Product name already exists'));
+        }
         next(error);
     }
 }
