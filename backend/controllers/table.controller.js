@@ -87,6 +87,7 @@ export const reserveTable = async (req,res,next) => {
             phonenumber,
             pax,
         }
+        table.disabled = true
         await table.save()
         res.status(201).json({message:'Reserve successfully'})
     } catch (error) {
@@ -112,6 +113,7 @@ export const cancelReserve = async (req,res,next) => {
             phonenumber:null,
             pax:null
         }
+        table.disabled = false
         await table.save()
         res.status(200).json({message:'Reserve cancel successfully'})
     } catch (error) {
@@ -174,6 +176,18 @@ export const toggleOpenStatus = async (req, res, next) => {
       next(error);
     }
   };
+
+  export const getDisabledTables = async (req,res,next) => {
+    try {
+        // 查找所有被禁用的表格
+        const disabledTables = await Table.find({ disabled: true }, { _id: 1 });
+        
+        // 返回被禁用的表格 ID 列表
+        res.status(200).json(disabledTables.map(table => table._id));
+    } catch (error) {
+        next(error)
+    }
+  }
 
   // 每分钟检查一次过期的预订
 cron.schedule('* * * * *', async () => {

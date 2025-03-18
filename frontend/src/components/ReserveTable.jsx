@@ -17,6 +17,27 @@ const ReserveTable = () => {
   const ITEMS_PER_PAGE = 14;
 
   useEffect(() => {
+    const fetchDisabledTables = async () => {
+        try {
+            const res = await fetch('/api/table/get-disabled-tables');
+            const data = await res.json();
+            if (res.ok) {
+                // 将返回的禁用表格 ID 列表转换为对象形式
+                const disabledTablesObj = data.reduce((acc, tableId) => {
+                    acc[tableId] = true;
+                    return acc;
+                }, {});
+                setDisabledTables(disabledTablesObj);
+            }
+        } catch (error) {
+            console.log(error.message);
+        }
+    };
+
+    fetchDisabledTables();
+}, []);
+
+  useEffect(() => {
     const FetchAreas = async () => {
       try {
         const res = await fetch('/api/area/get-areas');
@@ -98,7 +119,7 @@ const ReserveTable = () => {
       const res = await fetch(`/api/table/reserve-table/${selectedTableId}`, {
         method: 'PUT',
         headers: { 'Content-type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({...formData, disabled:true}),
       });
       const data = await res.json();
       if (res.ok) {
@@ -133,6 +154,10 @@ const ReserveTable = () => {
     try {
       const res = await fetch(`/api/table/cancel-reserve/${tableId}`, {
         method: 'PUT',
+        headers: { 'Content-type': 'application/json' },
+            body: JSON.stringify({
+                disabled: false, // 标记为启用
+            }),
       });
       const data = await res.json();
       if (res.ok) {

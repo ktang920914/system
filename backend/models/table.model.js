@@ -76,6 +76,10 @@ const tableSchema = new mongoose.Schema({
             type:Number,
         },
     },
+    disabled:{
+        type:Boolean,
+        default:false
+    }
 },{timestamps:true})
 const Table = mongoose.model('Table', tableSchema)
 
