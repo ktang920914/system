@@ -105,3 +105,17 @@ export const updateProduct = async (req,res,next) => {
         next(error);
     }
 }
+
+export const deleteSubCategory = async (req,res,next) => {
+    try {
+        const { subcategoryId } = req.params;
+        // Assuming you have a model named SubCategory
+        const deletedSubCategory = await SubCategory.findByIdAndDelete(subcategoryId);
+        if (!deletedSubCategory) {
+            return res.status(404).json({ message: 'SubCategory not found' });
+        }
+        res.status(200).json({ message: 'SubCategory deleted successfully' });
+    } catch (error) {
+        next(error)
+    }
+}

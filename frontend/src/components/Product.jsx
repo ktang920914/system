@@ -1,6 +1,7 @@
 import { Alert, Button, FileInput, Label, Modal, Pagination, Select, Table, TextInput } from 'flowbite-react';
 import React, { useState, useEffect } from 'react';
 import productImage from '../assets/productImage.png';
+import * as XLSX from 'xlsx'; // 导入 xlsx 库
 
 const Product = () => {
     const [formData, setFormData] = useState({});
@@ -217,6 +218,22 @@ const Product = () => {
         return filteredProducts.slice(startIndex, endIndex);
     };
 
+    // 生成 Excel 报告的函数
+    // 生成 Excel 报告的函数
+    const generateExcelReport = () => {
+        // 将 productsub 转换为字符串（只提取 name）
+        const dataForExcel = filteredProducts.map(product => ({
+            ...product,
+            productsub: product.productsub ? product.productsub.name : 'N/A', // 将嵌套对象转换为字符串
+        }));
+
+        // 创建 Excel 工作表
+        const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Products");
+        XLSX.writeFile(workbook, "ProductsReport.xlsx");
+    };
+
     return (
         <div className='w-full max-w-5xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
             <div className='flex items-center justify-between'>
@@ -230,6 +247,12 @@ const Product = () => {
                 <div className='flex items-center gap-2'>
                     <Button onClick={handleProductModal}>Create product</Button>
                     <Button onClick={handleSubModal}>Create Subcategory</Button>
+                    <Button 
+                        onClick={generateExcelReport} 
+                        disabled={filteredProducts.length === 0} // 当表格没有数据时禁用按钮
+                    >
+                        Report
+                    </Button>
                 </div>
             </div>
 
@@ -255,31 +278,31 @@ const Product = () => {
                     <Table.HeadCell><span>Edit</span></Table.HeadCell>
                 </Table.Head>
                 <Table.Body>
-    {getPaginationData().map((product) => (
-        <Table.Row key={product._id}>
-            <Table.Cell>{product.productcategory}</Table.Cell>
-            <Table.Cell>
-                {product.productsub ? product.productsub.name : 'N/A'}
-            </Table.Cell>
-            <Table.Cell>{product.productname}</Table.Cell>
-            <Table.Cell>
-                <img 
-                    src={product.productimage ? URL.createObjectURL(product.productimage) : productImage} 
-                    alt={product.productname} 
-                    className="w-16 h-16 object-cover" 
-                />
-            </Table.Cell>
-            <Table.Cell>RM{product.productprice}</Table.Cell>
-            <Table.Cell>{product.producttax}%</Table.Cell>
-            <Table.Cell>
-                <Button color="failure" onClick={() => handleDelete(product._id)}>Delete</Button>
-            </Table.Cell>
-            <Table.Cell>
-                <Button color="warning" onClick={() => handleEditModal(product)}>Edit</Button>
-            </Table.Cell>
-        </Table.Row>
-    ))}
-</Table.Body>
+                    {getPaginationData().map((product) => (
+                        <Table.Row key={product._id}>
+                            <Table.Cell>{product.productcategory}</Table.Cell>
+                            <Table.Cell>
+                                {product.productsub ? product.productsub.name : 'N/A'}
+                            </Table.Cell>
+                            <Table.Cell>{product.productname}</Table.Cell>
+                            <Table.Cell>
+                                <img 
+                                    src={product.productimage ? URL.createObjectURL(product.productimage) : productImage} 
+                                    alt={product.productname} 
+                                    className="w-16 h-16 object-cover" 
+                                />
+                            </Table.Cell>
+                            <Table.Cell>RM{product.productprice}</Table.Cell>
+                            <Table.Cell>{product.producttax}%</Table.Cell>
+                            <Table.Cell>
+                                <Button color="failure" onClick={() => handleDelete(product._id)}>Delete</Button>
+                            </Table.Cell>
+                            <Table.Cell>
+                                <Button color="warning" onClick={() => handleEditModal(product)}>Edit</Button>
+                            </Table.Cell>
+                        </Table.Row>
+                    ))}
+                </Table.Body>
             </Table>
 
             <div className='flex justify-center mt-4'>
