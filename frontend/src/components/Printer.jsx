@@ -8,6 +8,7 @@ const Printer = () => {
     const [errorMessage, setErrorMessage] = useState(null);
     const [printers, setPrinters] = useState([]);
     const [areas, setAreas] = useState([]);
+    const [products, setProducts] = useState([])
     const [selectedPrinter, setSelectedPrinter] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 7;
@@ -36,9 +37,22 @@ const Printer = () => {
         }
     };
 
+    const fetchProducts = async () => {
+        try {
+            const res = await fetch('/api/product/get-products');
+            const data = await res.json();
+            if (res.ok) {
+                setProducts(data)
+            }
+        } catch (error) {
+            console.log(error.message);
+        }
+    };
+
     useEffect(() => {
         fetchPrinters();
         fetchAreas();
+        fetchProducts()
     }, []);
 
     const handleChange = (e) => {
@@ -102,6 +116,7 @@ const Printer = () => {
             const data = await res.json();
             if (res.ok) {
                 fetchPrinters();
+                fetchProducts()
             } else {
                 console.log(data.message);
             }

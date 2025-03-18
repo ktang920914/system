@@ -20,6 +20,8 @@ import { IoCreateOutline } from "react-icons/io5";
 import { PiArrowsSplit } from "react-icons/pi";
 import { BsPrinter } from "react-icons/bs";
 import { TiPrinter } from "react-icons/ti";
+import { TbTransferIn } from "react-icons/tb";
+import { PiWarehouse } from "react-icons/pi";
 
 const DashSidebar = () => {
   const location = useLocation();
@@ -196,11 +198,11 @@ const DashSidebar = () => {
             </Link>
           </Sidebar.Collapse>
 
-          <Sidebar.Collapse icon={AiOutlineGift} label="Inventory">
+          <Sidebar.Collapse icon={PiWarehouse} label="Inventory">
             <Link to='/dashboard?tab=inventory'>
                 <Sidebar.Item
                   active={tab === 'inventory'}
-                  icon={PiArrowsSplit}
+                  icon={TbTransferIn}
                   labelColor='dark'
                   as='div'
                 >
