@@ -1,6 +1,7 @@
 import express from 'express';
 import { createProduct, createSubCategory, deleteProduct, 
-    deleteSubCategory, getProducts, getSubCategories, updateProduct} from '../controllers/product.controller.js';
+    deleteSubCategory, getProducts, getSubCategories, updateProduct,
+    updateSubCategory} from '../controllers/product.controller.js';
 
 const router = express.Router();
 
@@ -11,5 +12,6 @@ router.get('/get-sub-categories', getSubCategories);
 router.delete('/delete-product/:productId', deleteProduct);
 router.put('/update-product/:productId', updateProduct);
 router.delete('/delete-subcategory/:subcategoryId', deleteSubCategory)
+router.put('/update-subcategory/:subcategoryId', updateSubCategory); // 新增的路由
 
 export default router;

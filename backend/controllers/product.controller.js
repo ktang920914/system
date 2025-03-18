@@ -125,3 +125,31 @@ export const deleteSubCategory = async (req, res, next) => {
         next(error);
     }
 };
+
+export const updateSubCategory = async (req, res, next) => {
+    try {
+        const { subcategoryId } = req.params;
+        const { name } = req.body;
+
+        // 检查新的子分类名称是否已经存在
+        const existingSubCategory = await SubCategory.findOne({ name });
+        if (existingSubCategory && existingSubCategory._id.toString() !== subcategoryId) {
+            return res.status(400).json({ message: 'Sub category name is already exists' });
+        }
+
+        // 更新子分类名称
+        const updatedSubCategory = await SubCategory.findByIdAndUpdate(
+            subcategoryId,
+            { name },
+            { new: true }
+        );
+
+        if (!updatedSubCategory) {
+            return res.status(404).json({ message: 'SubCategory not found' });
+        }
+
+        res.status(200).json(updatedSubCategory);
+    } catch (error) {
+        next(error);
+    }
+};
