@@ -8,7 +8,6 @@ const stockSchema = new mongoose.Schema({
     stockcode: {
         type: String,
         required: true,
-        unique: true,
     },
     stockquantity: {
         type: Number,

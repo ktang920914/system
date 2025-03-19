@@ -103,6 +103,33 @@ const Stock = () => {
         }
     };
 
+    const handleDelete = async (stockId) => {
+        try {
+            const res = await fetch(`/api/stock/delete-stock/${stockId}`,{
+                method: 'DELETE'
+            })
+            const data = await res.json()
+            if(res.ok){
+                const fetchStocks = async () => {
+                    try {
+                        const res = await fetch('/api/stock/get-stocks');
+                        const data = await res.json();
+                        if (res.ok) {
+                            setStocks(data)
+                        }
+                    } catch (error) {
+                        console.error(error);
+                    }
+                };
+                fetchStocks();
+            }else{
+                console.log(data.message)
+            }
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
     return (
         <div className='w-full max-w-5xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
             <div className='flex items-center justify-between'>
@@ -133,10 +160,10 @@ const Stock = () => {
                                 <Button color="success" onClick={() => handleInOut(stock._id, 'in')}>In</Button>
                             </Table.Cell>
                             <Table.Cell>
-                                <Button color="failure" onClick={() => handleInOut(stock._id, 'out')}>Out</Button>
+                                <Button color="warning" onClick={() => handleInOut(stock._id, 'out')}>Out</Button>
                             </Table.Cell>
                             <Table.Cell>
-                                <Button color="warning">Edit</Button>
+                                <Button color="failure" onClick={() => {handleDelete(stock._id)}}>Delete</Button>
                             </Table.Cell>
                         </Table.Row>
                     ))}
@@ -170,7 +197,8 @@ const Stock = () => {
                             </div>
                             <div className="mt-4">
                                 <Label value="Stock Code" />
-                                <TextInput type="text" id="stockcode" placeholder="Enter Stock Code" onChange={handleChange} required />
+                                <TextInput type="text" id="stockcode" placeholder="Enter Stock Code" 
+                                maxLength={25} onChange={handleChange} required />
                             </div>
                             <div className="mt-4 mb-4">
                                 <Label value="Quantity" />

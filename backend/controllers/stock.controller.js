@@ -29,7 +29,6 @@ export const getStock = async (req, res, next) => {
             .populate('warehouse', 'warehousename')
             .sort({ updatedAt: -1 });
         res.status(200).json(stocks);
-        res.status(200).json(stocks);
     } catch (error) {
         next(error);
     }
