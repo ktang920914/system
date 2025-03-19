@@ -1,4 +1,4 @@
-import { Button, Table, Modal, Label, TextInput, Select, Alert } from 'flowbite-react';
+import { Button, Table, Modal, Label, TextInput, Select, Alert, Pagination } from 'flowbite-react';
 import React, { useEffect, useState } from 'react';
 
 const Stock = () => {
@@ -9,6 +9,10 @@ const Stock = () => {
     const [stocks, setStocks] = useState([]);
     const [openModal, setOpenModal] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(7); // 每页显示的条目数
+    const [searchTerm, setSearchTerm] = useState(''); // 搜索框的输入
+    const [sortByDate, setSortByDate] = useState('desc'); // 日期排序方式
 
     useEffect(() => {
         fetchWareHouses();
@@ -44,7 +48,13 @@ const Stock = () => {
                 ...stock, 
                 actionType: stock.lastActionType || 'in' // 使用数据库中的 lastActionType
             }));
-            setStocks(stocksWithActionType);
+            // 按日期排序
+            const sortedStocks = stocksWithActionType.sort((a, b) => {
+                return sortByDate === 'asc' 
+                    ? new Date(a.updatedAt) - new Date(b.updatedAt)
+                    : new Date(b.updatedAt) - new Date(a.updatedAt);
+            });
+            setStocks(sortedStocks);
         } else {
             console.error(error);
         }
@@ -129,19 +139,53 @@ const Stock = () => {
         }
     }
 
+    // 处理搜索输入
+    const handleSearch = (e) => {
+        setSearchTerm(e.target.value.toLowerCase());
+    };
+
+    // 过滤和排序 stocks
+    const filteredStocks = stocks.filter(stock => 
+        stock.productname.toLowerCase().includes(searchTerm) ||
+        stock.stockcode.toLowerCase().includes(searchTerm)
+    );
+
+    // 计算当前页的数据
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentStocks = filteredStocks.slice(indexOfFirstItem, indexOfLastItem);
+
+    // 处理页码变化
+    const handlePageChange = (page) => {
+        setCurrentPage(page);
+    };
+
+    // 处理日期排序
+    const handleSortByDate = () => {
+        setSortByDate(sortByDate === 'desc' ? 'asc' : 'desc');
+        fetchStocks(); // 重新获取并排序数据
+    };
+
     return (
         <div className='w-full max-w-5xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
             <div className='flex items-center justify-between'>
                 <h1 className='text-2xl font-semibold text-gray-500'>Stock</h1>
                 <div className='flex items-center gap-2'>
-                <Button>Search</Button>
+                    <TextInput 
+                        type="text" 
+                        placeholder="Search stock code" 
+                        value={searchTerm}
+                        onChange={handleSearch}
+                    />
                 <Button onClick={handleModal}>Create Stock</Button>
                 </div>
             </div>
 
             <Table hoverable className='shadow-md mt-4'>
                 <Table.Head>
-                    <Table.HeadCell>Date</Table.HeadCell>
+                    <Table.HeadCell onClick={handleSortByDate} className="cursor-pointer">
+                        Date {sortByDate === 'asc' ? '↑' : '↓'}
+                    </Table.HeadCell>
                     <Table.HeadCell>Warehouse</Table.HeadCell>
                     <Table.HeadCell>Stock Code</Table.HeadCell>
                     <Table.HeadCell>Quantity</Table.HeadCell>
@@ -150,7 +194,7 @@ const Stock = () => {
                     <Table.HeadCell><span>Delete</span></Table.HeadCell>
                 </Table.Head>
                 <Table.Body>
-                    {stocks.map((stock) => (
+                    {currentStocks.map((stock) => (
                         <Table.Row key={stock._id}>
                             <Table.Cell>{new Date(stock.createdAt).toLocaleDateString()}</Table.Cell>
                             <Table.Cell>{stock.warehouse?.warehousename}</Table.Cell>
@@ -178,6 +222,15 @@ const Stock = () => {
                     ))}
                 </Table.Body>
             </Table>
+
+            {/* 分页控件 */}
+            <div className="flex justify-center mt-4">
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={Math.ceil(filteredStocks.length / itemsPerPage)}
+                    onPageChange={handlePageChange}
+                />
+            </div>
 
             <Modal show={openModal} size="md" popup onClose={handleModal}>
                 <Modal.Header />
