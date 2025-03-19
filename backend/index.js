@@ -9,6 +9,7 @@ import tableRoute from './routes/table.route.js';
 import productRoute from './routes/product.route.js';
 import printerRoute from './routes/printer.route.js';
 import inventoryRoute from './routes/inventory.route.js'
+import stockRoute from './routes/stock.route.js'
 
 dotenv.config();
 const app = express();
@@ -28,6 +29,7 @@ app.use('/api/table', tableRoute);
 app.use('/api/product', productRoute);
 app.use('/api/printer', printerRoute);
 app.use('/api/inventory', inventoryRoute);
+app.use('/api/stock', stockRoute);
 
 app.get('/', (req, res) => {
     res.send('<h1>Welcome to backend system</h1>');

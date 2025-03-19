@@ -1,5 +1,5 @@
-import Inventory from "../models/inventory.model.js"
 import { errorHandler } from "../utils/error.js"
+import Inventory from "../models/inventory.model.js"
 
 export const createWarehouse = async (req,res,next) => {
     try {

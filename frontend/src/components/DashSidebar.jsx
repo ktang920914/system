@@ -22,6 +22,7 @@ import { BsPrinter } from "react-icons/bs";
 import { TiPrinter } from "react-icons/ti";
 import { TbTransferIn } from "react-icons/tb";
 import { PiWarehouse } from "react-icons/pi";
+import { LuBoxes } from "react-icons/lu";
 
 const DashSidebar = () => {
   const location = useLocation();
@@ -207,6 +208,17 @@ const DashSidebar = () => {
                   as='div'
                 >
                   Warehouse
+                </Sidebar.Item>
+            </Link>
+
+            <Link to='/dashboard?tab=stock'>
+                <Sidebar.Item
+                  active={tab === 'stock'}
+                  icon={LuBoxes}
+                  labelColor='dark'
+                  as='div'
+                >
+                  Stock
                 </Sidebar.Item>
             </Link>
           </Sidebar.Collapse>
