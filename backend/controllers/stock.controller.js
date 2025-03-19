@@ -49,10 +49,10 @@ export const updateStock = async (req, res, next) => {
         console.log(`Type: ${type}, Stock Quantity: ${stock.stockquantity}, Initial Product Quantity: ${product.productquantity}`); // 调试输出
 
         // 根据类型更新 productquantity
-        if (type === 'out') {
-            product.productquantity += stock.stockquantity; // 增加
-        } else if (type === 'in') {
-            product.productquantity -= stock.stockquantity; // 减少
+        if (type === 'in') {
+            product.productquantity -= stock.stockquantity; // 增加
+        } else if (type === 'out') {
+            product.productquantity += stock.stockquantity; // 减少
         }
 
         // 更新 lastActionType

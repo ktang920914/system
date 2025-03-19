@@ -133,7 +133,10 @@ const Stock = () => {
         <div className='w-full max-w-5xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
             <div className='flex items-center justify-between'>
                 <h1 className='text-2xl font-semibold text-gray-500'>Stock</h1>
+                <div className='flex items-center gap-2'>
+                <Button>Search</Button>
                 <Button onClick={handleModal}>Create Stock</Button>
+                </div>
             </div>
 
             <Table hoverable className='shadow-md mt-4'>
@@ -163,7 +166,13 @@ const Stock = () => {
                                 </Button>
                             </Table.Cell>
                             <Table.Cell>
-                                <Button color="failure" onClick={() => {handleDelete(stock._id)}}>Delete</Button>
+                                <Button 
+                                    color="failure" 
+                                    onClick={() => handleDelete(stock._id)}
+                                    disabled={stock.actionType === 'out'} // 当 actionType 为 'out' 时禁用按钮
+                                >
+                                    Delete
+                                </Button>
                             </Table.Cell>
                         </Table.Row>
                     ))}
