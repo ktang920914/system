@@ -46,10 +46,12 @@ export const updateStock = async (req, res, next) => {
             return next(errorHandler(404, 'Product not found'));
         }
 
+        console.log(`Type: ${type}, Stock Quantity: ${stock.stockquantity}, Initial Product Quantity: ${product.productquantity}`); // 调试输出
+
         // 根据类型更新 productquantity
-        if (type === 'in') {
+        if (type === 'out') {
             product.productquantity += stock.stockquantity; // 增加
-        } else if (type === 'out') {
+        } else if (type === 'in') {
             product.productquantity -= stock.stockquantity; // 减少
         }
 
