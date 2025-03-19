@@ -1,7 +1,5 @@
 import { Product, SubCategory } from "../models/product.model.js";
 import { errorHandler } from "../utils/error.js";
-import fs from 'fs';
-import path from 'path';
 
 export const createProduct = async (req, res, next) => {
     try {
