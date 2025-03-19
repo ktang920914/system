@@ -1,3 +1,4 @@
+// models/Stock.js
 import mongoose from 'mongoose';
 
 const stockSchema = new mongoose.Schema({
@@ -14,8 +15,13 @@ const stockSchema = new mongoose.Schema({
         required: true,
     },
     warehouse: {
-        type: mongoose.Schema.Types.ObjectId, // 引用 Inventory 模型
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'Inventory',
+    },
+    lastActionType: {
+        type: String,
+        enum: ['in', 'out'],
+        default: 'in',
     },
 }, { timestamps: true });
 

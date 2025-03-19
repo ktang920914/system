@@ -40,7 +40,11 @@ const Stock = () => {
         const res = await fetch('/api/stock/get-stocks');
         const data = await res.json();
         if (res.ok) {
-            setStocks(data);
+            const stocksWithActionType = data.map(stock => ({ 
+                ...stock, 
+                actionType: stock.lastActionType || 'in' // 使用数据库中的 lastActionType
+            }));
+            setStocks(stocksWithActionType);
         } else {
             console.error(error);
         }
@@ -69,7 +73,7 @@ const Stock = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ...formData,
-                    warehouse: formData.warehousename, // Ensure correct warehouse data is passed
+                    warehouse: formData.warehousename,
                 }),
             });
             const data = await res.json();
@@ -85,16 +89,22 @@ const Stock = () => {
         }
     };
 
-    const handleInOut = async (stockId, type) => {
+    const handleInOut = async (stockId) => {
         try {
+            const stock = stocks.find(s => s._id === stockId);
+            const type = stock.actionType === 'in' ? 'out' : 'in'; // 切换类型
+    
             const res = await fetch(`/api/stock/update-stock/${stockId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type }),
+                body: JSON.stringify({ type }), // 发送新的类型
             });
             const data = await res.json();
             if (res.ok) {
-                fetchStocks();
+                const updatedStocks = stocks.map(s => 
+                    s._id === stockId ? { ...s, actionType: type } : s
+                );
+                setStocks(updatedStocks); // 更新本地状态
             } else {
                 console.error(data.message);
             }
@@ -110,17 +120,6 @@ const Stock = () => {
             })
             const data = await res.json()
             if(res.ok){
-                const fetchStocks = async () => {
-                    try {
-                        const res = await fetch('/api/stock/get-stocks');
-                        const data = await res.json();
-                        if (res.ok) {
-                            setStocks(data)
-                        }
-                    } catch (error) {
-                        console.error(error);
-                    }
-                };
                 fetchStocks();
             }else{
                 console.log(data.message)
@@ -144,9 +143,8 @@ const Stock = () => {
                     <Table.HeadCell>Stock Code</Table.HeadCell>
                     <Table.HeadCell>Quantity</Table.HeadCell>
                     <Table.HeadCell>Product</Table.HeadCell>
-                    <Table.HeadCell>In</Table.HeadCell>
-                    <Table.HeadCell>Out</Table.HeadCell>
-                    <Table.HeadCell><span>Edit</span></Table.HeadCell>
+                    <Table.HeadCell>In/Out</Table.HeadCell>
+                    <Table.HeadCell><span>Delete</span></Table.HeadCell>
                 </Table.Head>
                 <Table.Body>
                     {stocks.map((stock) => (
@@ -157,10 +155,12 @@ const Stock = () => {
                             <Table.Cell>{stock.stockquantity}</Table.Cell>
                             <Table.Cell>{stock.productname}</Table.Cell>
                             <Table.Cell>
-                                <Button color="success" onClick={() => handleInOut(stock._id, 'in')}>In</Button>
-                            </Table.Cell>
-                            <Table.Cell>
-                                <Button color="warning" onClick={() => handleInOut(stock._id, 'out')}>Out</Button>
+                                <Button 
+                                    color={stock.actionType === 'in' ? 'success' : 'warning'} 
+                                    onClick={() => handleInOut(stock._id)}
+                                >
+                                    {stock.actionType === 'in' ? 'In' : 'Out'}
+                                </Button>
                             </Table.Cell>
                             <Table.Cell>
                                 <Button color="failure" onClick={() => {handleDelete(stock._id)}}>Delete</Button>

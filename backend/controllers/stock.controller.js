@@ -45,12 +45,19 @@ export const updateStock = async (req, res, next) => {
         if (!product) {
             return next(errorHandler(404, 'Product not found'));
         }
+
+        // 根据类型更新 productquantity
         if (type === 'in') {
-            product.productquantity += stock.stockquantity;
+            product.productquantity += stock.stockquantity; // 增加
         } else if (type === 'out') {
-            product.productquantity -= stock.stockquantity;
+            product.productquantity -= stock.stockquantity; // 减少
         }
+
+        // 更新 lastActionType
+        stock.lastActionType = type;
+        await stock.save();
         await product.save();
+
         res.status(200).json(stock);
     } catch (error) {
         next(error);
