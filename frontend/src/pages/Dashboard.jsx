@@ -16,6 +16,7 @@ import ProductPrinter from '../components/ProductPrinter'
 import Inventory from '../components/Inventory'
 import Stock from '../components/Stock'
 import StockReport from '../components/StockReport'
+import Combo from '../components/Combo'
 
 const Dashboard = () => {
   
@@ -58,6 +59,8 @@ const Dashboard = () => {
         { tab === 'product' && <Product/>}
         {/* sub category */}
         { tab === 'sub-category' && <SubCategory/>}
+        {/* combo */}
+        { tab === 'combo' && <Combo/>}
         {/* product printer */}
         { tab === 'product-printer' && <ProductPrinter/>}
         {/* inventory */}

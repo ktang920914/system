@@ -24,6 +24,7 @@ import { TbTransferIn } from "react-icons/tb";
 import { PiWarehouse } from "react-icons/pi";
 import { LuBoxes } from "react-icons/lu";
 import { TbReportSearch } from "react-icons/tb";
+import { BsInboxes } from "react-icons/bs";
 
 const DashSidebar = () => {
   const location = useLocation();
@@ -185,6 +186,17 @@ const DashSidebar = () => {
                 as='div'
               >
                 Product Info
+              </Sidebar.Item>
+            </Link>
+
+            <Link to='/dashboard?tab=combo'>
+              <Sidebar.Item
+                active={tab === 'combo'}
+                icon={BsInboxes}
+                labelColor='dark'
+                as='div'
+              >
+                Combo
               </Sidebar.Item>
             </Link>
 
