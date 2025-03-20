@@ -1,5 +1,6 @@
 import { Button, Table, Modal, Label, TextInput, Select, Alert, Pagination } from 'flowbite-react';
 import React, { useEffect, useState } from 'react';
+import * as XLSX from 'xlsx';
 
 const Stock = () => {
     const [formData, setFormData] = useState({});
@@ -166,6 +167,25 @@ const Stock = () => {
         fetchStocks(); // 重新获取并排序数据
     };
 
+    const generateExcelReport = () => {
+        // 创建一个工作表
+        const ws = XLSX.utils.json_to_sheet(stocks.map(stock => ({
+            Date: new Date(stock.createdAt).toLocaleDateString(),
+            Warehouse: stock.warehouse?.warehousename,
+            'Stock Code': stock.stockcode,
+            Quantity: stock.stockquantity,
+            Product: stock.productname,
+            'In/Out': stock.actionType === 'in' ? 'In' : 'Out'
+        })));
+
+        // 创建一个工作簿
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Stock Report");
+
+        // 生成 Excel 文件并触发下载
+        XLSX.writeFile(wb, 'StockReport.xlsx');
+    }
+
     return (
         <div className='w-full max-w-5xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
             <div className='flex items-center justify-between'>
@@ -178,6 +198,7 @@ const Stock = () => {
                         onChange={handleSearch}
                     />
                 <Button onClick={handleModal}>Create Stock</Button>
+                <Button onClick={generateExcelReport}>Report</Button>
                 </div>
             </div>
 

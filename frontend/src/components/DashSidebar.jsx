@@ -23,6 +23,7 @@ import { TiPrinter } from "react-icons/ti";
 import { TbTransferIn } from "react-icons/tb";
 import { PiWarehouse } from "react-icons/pi";
 import { LuBoxes } from "react-icons/lu";
+import { TbReportSearch } from "react-icons/tb";
 
 const DashSidebar = () => {
   const location = useLocation();
@@ -219,6 +220,17 @@ const DashSidebar = () => {
                   as='div'
                 >
                   Stock
+                </Sidebar.Item>
+            </Link>
+
+            <Link to='/dashboard?tab=stock-report'>
+                <Sidebar.Item
+                  active={tab === 'stock-report'}
+                  icon={TbReportSearch}
+                  labelColor='dark'
+                  as='div'
+                >
+                  Stock Report
                 </Sidebar.Item>
             </Link>
           </Sidebar.Collapse>

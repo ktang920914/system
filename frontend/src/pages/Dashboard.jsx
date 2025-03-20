@@ -15,6 +15,7 @@ import Printer from '../components/Printer'
 import ProductPrinter from '../components/ProductPrinter'
 import Inventory from '../components/Inventory'
 import Stock from '../components/Stock'
+import StockReport from '../components/StockReport'
 
 const Dashboard = () => {
   
@@ -63,6 +64,8 @@ const Dashboard = () => {
         { tab === 'inventory' && <Inventory/>}
         {/* stock */}
         { tab === 'stock' && <Stock/>}
+        {/* stock */}
+        { tab === 'stock-report' && <StockReport/>}
     </div>
   )
 }
