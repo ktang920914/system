@@ -1,27 +1,312 @@
-import { Button, Table } from 'flowbite-react'
-import React from 'react'
+import React, { useState, useEffect } from 'react';
+import { Button, Table, Modal, TextInput, Select, Alert, Label } from 'flowbite-react';
 
 const Combo = () => {
-  return (
-    <div className='w-full max-w-4xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar
-       scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
+    const [combos, setCombos] = useState([]);
+    const [showModal, setShowModal] = useState(false);
+    const [comboName, setComboName] = useState('');
+    const [option, setOption] = useState(1);
+    const [productDetails, setProductDetails] = useState([{ productname: '', comboquantity: '' }]);
+    const [comboProducts, setComboProducts] = useState([]);
+    const [singleProducts, setSingleProducts] = useState([]);
+    const [errorMessage, setErrorMessage] = useState(null);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editingCombo, setEditingCombo] = useState(null);
+
+    useEffect(() => {
+        fetchCombos();
+        fetchComboProducts();
+    }, []);
+
+    const fetchCombos = async () => {
+        try {
+            const res = await fetch('/api/combo/get-combos');
+            const data = await res.json();
+            if (res.ok) {
+                setCombos(data);
+            } else {
+                console.log(data.message);
+            }
+        } catch (error) {
+            console.error('Error fetching combos:', error);
+        }
+    };
+
+    const fetchComboProducts = async () => {
+        try {
+            const res = await fetch('/api/product/get-products');
+            const data = await res.json();
+            const comboProducts = data.filter(product => product.productcategory === 'Combo');
+            const singleProducts = data.filter(product => product.productcategory === 'Single');
+            setComboProducts(comboProducts);
+            setSingleProducts(singleProducts);
+        } catch (error) {
+            console.error('Error fetching combo products:', error);
+        }
+    };
+
+    const handleCreateCombo = async () => {
+        try {
+            const res = await fetch('/api/combo/create-combo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    comboName,
+                    option,
+                    productDetails,
+                }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setCombos(prev => [...prev, data]);
+                setErrorMessage(null);
+                setShowModal(false);
+                fetchCombos();
+            } else {
+                setErrorMessage(data.message);
+            }
+        } catch (error) {
+            setErrorMessage(error.message);
+        }
+    };
+
+    const handleDeleteCombo = async (comboId) => {
+        try {
+            const res = await fetch(`/api/combo/delete-combo/${comboId}`, {
+                method: 'DELETE',
+            });
+            if (res.ok) {
+                fetchCombos(); // 重新获取数据
+            } else {
+                const data = await res.json();
+                setErrorMessage(data.message);
+            }
+        } catch (error) {
+            setErrorMessage(error.message);
+        }
+    };
+
+    const handleCreateModal = () => {
+        setShowModal(!showModal);
+        setErrorMessage(null);
+    };
+
+    const handleOptionChange = (e) => {
+        const value = parseInt(e.target.value, 10);
+        setOption(value);
+        setProductDetails(Array.from({ length: value }, () => ({ productname: '', comboquantity: '' })));
+    };
+
+    const handleProductDetailChange = (index, field, value) => {
+        const newProductDetails = [...productDetails];
+        newProductDetails[index][field] = value;
+        setProductDetails(newProductDetails);
+    };
+
+    const handleEdit = (combo) => {
+        setEditingCombo(combo);
+        setComboName(combo.comboName._id);
+        setOption(combo.option);
+        setProductDetails(Array.from({ length: combo.option }, (_, index) => 
+            combo.productDetails[index] || { productname: '', comboquantity: '' }
+        ));
+        setShowEditModal(true);
+    };
+
+    const handleEditSubmit = async (e) => {
+        e.preventDefault(); // 确保调用 preventDefault
+        try {
+            const res = await fetch(`/api/combo/update-combo/${editingCombo._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    comboName,
+                    option,
+                    productDetails,
+                }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setShowEditModal(false);
+                fetchCombos(); // 重新获取数据
+            } else {
+                setErrorMessage(data.message);
+            }
+        } catch (error) {
+            setErrorMessage(error.message);
+        }
+    };
+
+    return (
+        <div className='w-full max-w-4xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
             <div className='flex items-center justify-between'>
                 <h1 className='text-2xl text-gray-500 font-semibold'>Combos</h1>
-                <Button>Create combo</Button>
+                <Button onClick={handleCreateModal}>Create combo</Button>
             </div>
 
             <Table hoverable className='shadow-md mt-4'>
                 <Table.Head>
-                <Table.HeadCell>Combo Name</Table.HeadCell>
-                <Table.HeadCell>Option</Table.HeadCell>
-                <Table.HeadCell>Product Name</Table.HeadCell>
-                <Table.HeadCell>Quantity</Table.HeadCell>
-                <Table.HeadCell>Delete</Table.HeadCell>
-                <Table.HeadCell><span>Edit</span></Table.HeadCell>
+                    <Table.HeadCell>Combo Name</Table.HeadCell>
+                    <Table.HeadCell>Option</Table.HeadCell>
+                    <Table.HeadCell>Product Name</Table.HeadCell>
+                    <Table.HeadCell>Quantity</Table.HeadCell>
+                    <Table.HeadCell>Delete</Table.HeadCell>
+                    <Table.HeadCell><span>Edit</span></Table.HeadCell>
                 </Table.Head>
+                <Table.Body>
+                    {combos.map((combo) => (
+                        combo.productDetails.map((product, index) => (
+                            <Table.Row key={`${combo._id}-${index}`}>
+                                {index === 0 && (
+                                    <>
+                                        <Table.Cell rowSpan={combo.productDetails.length}>
+                                            {combo.comboName.productname}
+                                        </Table.Cell>
+                                        <Table.Cell rowSpan={combo.productDetails.length}>
+                                            {combo.option}
+                                        </Table.Cell>
+                                    </>
+                                )}
+                                <Table.Cell>{product.productname}</Table.Cell>
+                                <Table.Cell>{product.comboquantity}</Table.Cell>
+                                {index === 0 && (
+                                    <>
+                                        <Table.Cell rowSpan={combo.productDetails.length}>
+                                            <Button color="failure" onClick={() => handleDeleteCombo(combo._id)}>Delete</Button>
+                                        </Table.Cell>
+                                        <Table.Cell rowSpan={combo.productDetails.length}>
+                                            <Button color="warning" onClick={() => handleEdit(combo)}>Edit</Button>
+                                        </Table.Cell>
+                                    </>
+                                )}
+                            </Table.Row>
+                        ))
+                    ))}
+                </Table.Body>
             </Table>
-    </div>
-  )
-}
 
-export default Combo
+            <Modal show={showModal} popup onClose={() => setShowModal(false)} size='md'>
+                <Modal.Header />
+                <Modal.Body>
+                    <div className="space-y-2">
+                        <h1 className='text-gray-500 text-2xl font-semibold'>Create combo</h1>
+                        {errorMessage && (
+                            <Alert color='failure'>
+                                {errorMessage}
+                            </Alert>
+                        )}
+                        <form onSubmit={(e) => { e.preventDefault(); handleCreateCombo(); }}>
+                            <div className='mt-4'>
+                                <Label value='Combo Name' />
+                                <Select
+                                    value={comboName}
+                                    onChange={(e) => setComboName(e.target.value)}
+                                    required
+                                >
+                                    <option value="">Select Combo Category</option>
+                                    {comboProducts.map((product) => (
+                                        <option key={product._id} value={product._id}>{product.productname}</option>
+                                    ))}
+                                </Select>
+                            </div>
+                            <div className='mt-4'>
+                                <Label value='Combo Option' />
+                                <TextInput
+                                    type="number"
+                                    value={option}
+                                    onChange={handleOptionChange}
+                                    placeholder="Enter Combo Option"
+                                    required
+                                />
+                            </div>
+                            {productDetails.map((detail, index) => (
+                                <div key={index}>
+                                    <div className='mt-4'>
+                                        <Label value={`Product Name ${index + 1}`} />
+                                        <Select
+                                            value={detail.productname}
+                                            onChange={(e) => handleProductDetailChange(index, 'productname', e.target.value)}
+                                            required
+                                        >
+                                            <option value="">Select Single Product</option>
+                                            {singleProducts.map((product) => (
+                                                <option key={product._id} value={product.productname}>{product.productname}</option>
+                                            ))}
+                                        </Select>
+                                    </div>
+                                    <div className='mt-4 mb-4'>
+                                        <Label value={`Product Quantity ${index + 1}`} />
+                                        <TextInput
+                                            type="number"
+                                            value={detail.comboquantity}
+                                            onChange={(e) => handleProductDetailChange(index, 'comboquantity', e.target.value)}
+                                            placeholder="Enter Product Quantity"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                            <Button type='submit'>Create</Button>
+                        </form>
+                    </div>
+                </Modal.Body>
+            </Modal>
+
+            <Modal show={showEditModal} popup onClose={() => setShowEditModal(false)} size='md'>
+                <Modal.Header />
+                <Modal.Body>
+                    <div className="space-y-2">
+                        <h1 className='text-gray-500 text-2xl font-semibold'>Update combo</h1>
+                        {errorMessage && (
+                            <Alert color='failure'>
+                                {errorMessage}
+                            </Alert>
+                        )}
+                        <form onSubmit={(e) => { e.preventDefault(); handleEditSubmit(e); }}>
+                            <div className='mt-4'>
+                                <Label value='Combo Option' />
+                                <TextInput
+                                    type="number"
+                                    value={option}
+                                    onChange={handleOptionChange}
+                                    placeholder="Enter Combo Option"
+                                    required
+                                />
+                            </div>
+                            {productDetails.map((detail, index) => (
+                                <div key={index}>
+                                    <div className='mt-4'>
+                                        <Label value={`Product Name ${index + 1}`} />
+                                        <Select
+                                            value={detail.productname}
+                                            onChange={(e) => handleProductDetailChange(index, 'productname', e.target.value)}
+                                            required
+                                        >
+                                            <option value="">Select Single Product</option>
+                                            {singleProducts.map((product) => (
+                                                <option key={product._id} value={product.productname}>{product.productname}</option>
+                                            ))}
+                                        </Select>
+                                    </div>
+                                    <div className='mt-4 mb-4'>
+                                        <Label value={`Product Quantity ${index + 1}`} />
+                                        <TextInput
+                                            type="number"
+                                            value={detail.comboquantity}
+                                            onChange={(e) => handleProductDetailChange(index, 'comboquantity', e.target.value)}
+                                            placeholder="Enter Product Quantity"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                            <Button type='submit'>Update</Button>
+                        </form>
+                    </div>
+                </Modal.Body>
+            </Modal>
+        </div>
+    );
+};
+
+export default Combo;
