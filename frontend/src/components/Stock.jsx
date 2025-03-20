@@ -140,16 +140,22 @@ const Stock = () => {
         }
     }
 
-    // 处理搜索输入
     const handleSearch = (e) => {
         setSearchTerm(e.target.value.toLowerCase());
     };
 
     // 过滤和排序 stocks
-    const filteredStocks = stocks.filter(stock => 
-        stock.productname.toLowerCase().includes(searchTerm) ||
-        stock.stockcode.toLowerCase().includes(searchTerm)
-    );
+    const filteredStocks = stocks.filter(stock => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+            stock.productname.toLowerCase().includes(searchLower) ||
+            stock.stockcode.toLowerCase().includes(searchLower) ||
+            stock.warehouse?.warehousename.toLowerCase().includes(searchLower) ||
+            stock.stockquantity.toString().includes(searchLower) ||
+            stock.actionType.toLowerCase().includes(searchLower) ||
+            new Date(stock.createdAt).toLocaleDateString().includes(searchLower)
+        );
+    });
 
     // 计算当前页的数据
     const indexOfLastItem = currentPage * itemsPerPage;
