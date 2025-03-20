@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Table, Modal, TextInput, Select, Alert, Label } from 'flowbite-react';
+import { Button, Table, Modal, TextInput, Select, Alert, Label, Pagination } from 'flowbite-react';
 
 const Combo = () => {
     const [combos, setCombos] = useState([]);
@@ -12,6 +12,9 @@ const Combo = () => {
     const [errorMessage, setErrorMessage] = useState(null);
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingCombo, setEditingCombo] = useState(null);
+    const [searchKeyword, setSearchKeyword] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 7;
 
     useEffect(() => {
         fetchCombos();
@@ -137,11 +140,43 @@ const Combo = () => {
         }
     };
 
+    // 新增：根据搜索关键字过滤 combos
+    const filteredCombos = combos.filter(combo => {
+        const comboNameMatch = combo.comboName && combo.comboName.productname && 
+            combo.comboName.productname.toLowerCase().includes(searchKeyword.toLowerCase());
+    
+        const productDetailsMatch = combo.productDetails && 
+            combo.productDetails.some(product => 
+                product && product.productname && 
+                product.productname.toLowerCase().includes(searchKeyword.toLowerCase())
+            );
+    
+        return comboNameMatch || productDetailsMatch;
+    });
+
+    // 计算总页数
+    const totalPages = Math.ceil(filteredCombos.length / ITEMS_PER_PAGE);
+
+    // 获取当前页的数据
+    const paginatedCombos = filteredCombos.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+    );
+
     return (
         <div className='w-full max-w-4xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
             <div className='flex items-center justify-between'>
                 <h1 className='text-2xl text-gray-500 font-semibold'>Combos</h1>
-                <Button onClick={handleCreateModal}>Create combo</Button>
+                <div className='flex items-center gap-2'>
+                    {/* 修改：添加搜索功能 */}
+                    <TextInput 
+                        type='text' 
+                        placeholder='Search' 
+                        value={searchKeyword}
+                        onChange={(e) => setSearchKeyword(e.target.value)}
+                    />
+                    <Button onClick={handleCreateModal}>Create combo</Button>
+                </div>
             </div>
 
             <Table hoverable className='shadow-md mt-4'>
@@ -154,7 +189,7 @@ const Combo = () => {
                     <Table.HeadCell><span>Edit</span></Table.HeadCell>
                 </Table.Head>
                 <Table.Body>
-                    {combos.map((combo) => (
+                    {paginatedCombos.map((combo) => (
                         combo.productDetails.map((product, index) => (
                             <Table.Row key={`${combo._id}-${index}`}>
                                 {index === 0 && (
@@ -184,6 +219,14 @@ const Combo = () => {
                     ))}
                 </Table.Body>
             </Table>
+
+            <div className='flex justify-center mt-4'>
+                <Pagination 
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={(page) => setCurrentPage(page)}
+                />
+            </div>
 
             <Modal show={showModal} popup onClose={() => setShowModal(false)} size='md'>
                 <Modal.Header />
