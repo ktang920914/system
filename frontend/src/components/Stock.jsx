@@ -35,7 +35,9 @@ const Stock = () => {
         const res = await fetch('/api/product/get-products');
         const data = await res.json();
         if (res.ok) {
-            setProducts(data);
+            // Filter products to only include those with productcategory 'Single'
+            const singleProducts = data.filter(product => product.productcategory === 'Single');
+            setProducts(singleProducts);
         } else {
             console.error(error);
         }
