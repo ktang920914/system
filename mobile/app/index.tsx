@@ -1,10 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
+import { Link } from 'expo-router'
 
 const index = () => {
   return (
-    <View>
-      <Text>Welcome to mobile system</Text>
+    <View className='flex-1 items-center justify-center'>
+      <Text className='text-blue-500 text-5xl font-semibold'>index!!</Text>
     </View>
   )
 }
