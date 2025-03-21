@@ -231,7 +231,7 @@ const DashSidebar = () => {
                   labelColor='dark'
                   as='div'
                 >
-                  Transfer
+                  Transfer Product
                 </Sidebar.Item>
             </Link>
 
