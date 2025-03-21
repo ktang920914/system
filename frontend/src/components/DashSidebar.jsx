@@ -231,7 +231,7 @@ const DashSidebar = () => {
                   labelColor='dark'
                   as='div'
                 >
-                  Stock
+                  Transfer
                 </Sidebar.Item>
             </Link>
 
