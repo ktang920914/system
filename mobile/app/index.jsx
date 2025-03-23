@@ -4,8 +4,10 @@ import Main from '../components/Main.jsx'
 
 export default function Index() {
   return (
-    <View className="flex-1 items-center justify-center">
-      <Main />
-    </View>
+    
+      <View className="flex-1 items-center justify-center">
+        <Main />
+      </View>
+    
   );
 }

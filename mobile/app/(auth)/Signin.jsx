@@ -16,6 +16,10 @@ const Signin = () => {
     router.replace('/')
   }
 
+  const handleSignin = async (e) => {
+    
+  }
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -47,14 +51,16 @@ const Signin = () => {
           </View>
 
           <TouchableOpacity
-            className="bg-[#00787a] py-3 px-6 rounded-lg items-center"
+            className="bg-[#188183] py-3 px-6 rounded-lg items-center"
           >
-            <Text className="text-white text-2xl font-semibold">Sign in</Text>
+            <Text className="text-white text-2xl font-semibold"
+            onPressIn={handleSignin}
+            >Sign in</Text>
           </TouchableOpacity>
 
           <View className='mt-4'>
             <TouchableOpacity
-              className="bg-[#00787a] py-3 px-6 rounded-lg items-center"
+              className="bg-[#188183] py-3 px-6 rounded-lg items-center"
               onPress={handleBack}
             >
               <Text className="text-white text-2xl font-semibold">Back</Text>
