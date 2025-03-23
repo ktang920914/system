@@ -15,9 +15,19 @@ const Signin = () => {
 
     const handleSignin = async () => {
         try {
-            
+            const res = await fetch('http://192.168.212.66:3000/api/auth/signin',{
+                method: 'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify(formData)
+            })
+            const data = await res.json()
+            if(res.ok){
+                router.replace('/Table')
+            }else{
+                console.log(data.message)
+            }
         } catch (error) {
-            
+            console.log(error)
         }
     }
 
@@ -25,14 +35,10 @@ const Signin = () => {
         router.replace('/')
     }
 
-    const handleTest = () => {
-        router.replace('/Table')
-    }
-
   return (
     <View className='flex-1 items-center justify-center'>
     <View className='w-full max-w-lg bg-white shadown-lg p-8 rounded-lg'>
-      <Text className='text-2xl text-gray-500 font-semibold text-center'>SYSTEM</Text>
+      <Text className='text-2xl text-gray-500 font-semibold text-center'>Sign in</Text>
 
         <View className='mt-4'>
             <Text className='text-xl'>ID : </Text>
@@ -51,8 +57,8 @@ const Signin = () => {
             value={formData.password}/>
         </View>
 
-        <TouchableOpacity className="px-8 py-3 bg-[#006b7e] rounded-full mt-4"  onPress={handleTest}>
-                <Text className='text-2xl font-semibold text-white text-center'>SIGN IN</Text>
+        <TouchableOpacity className="px-8 py-3 bg-[#006b7e] rounded-full mt-4"  onPress={handleSignin}>
+                <Text className='text-2xl font-semibold text-white text-center'>Sign in</Text>
         </TouchableOpacity>
 
         <TouchableOpacity className="px-8 py-3 bg-[#006b7e] rounded-full mt-4" onPress={handleBack}>
