@@ -1,8 +1,11 @@
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import React, { useState } from 'react'
 import { Link, router } from 'expo-router'
+import useUserstore from '../../store'
 
 const Signin = () => {
+
+    const {currentUser, signInSuccess} = useUserstore()
 
     const [formData, setFormData] = useState({
         userid: '',
@@ -22,6 +25,7 @@ const Signin = () => {
             })
             const data = await res.json()
             if(res.ok){
+                signInSuccess(data)
                 router.replace('/Table')
             }else{
                 console.log(data.message)
