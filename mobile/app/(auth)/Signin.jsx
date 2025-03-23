@@ -1,12 +1,11 @@
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import React, { useState } from 'react'
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native'
+import React, { useEffect, useState } from 'react'
 import { Link, router } from 'expo-router'
 import useUserstore from '../../store'
 
 const Signin = () => {
 
-    const {currentUser, signInSuccess} = useUserstore()
-
+    const {currentUser, signInSuccess, signInStart, signInFailure, loading, error, clearError} = useUserstore()
     const [formData, setFormData] = useState({
         userid: '',
         password: ''
@@ -17,6 +16,7 @@ const Signin = () => {
     }
 
     const handleSignin = async () => {
+        signInStart()
         try {
             const res = await fetch('http://192.168.212.66:3000/api/auth/signin',{
                 method: 'POST',
@@ -28,7 +28,7 @@ const Signin = () => {
                 signInSuccess(data)
                 router.replace('/Table')
             }else{
-                console.log(data.message)
+                signInFailure(data.message)
             }
         } catch (error) {
             console.log(error)
@@ -38,6 +38,14 @@ const Signin = () => {
     const handleBack = () => {
         router.replace('/')
     }
+
+    useEffect(() => {
+        if (error) {
+            Alert.alert('Error', error, [
+                { text: 'OK', onPress: () => clearError() }
+            ]);
+        }
+    }, [error]);
 
   return (
     <View className='flex-1 items-center justify-center'>
@@ -61,8 +69,12 @@ const Signin = () => {
             value={formData.password}/>
         </View>
 
-        <TouchableOpacity className="px-8 py-3 bg-[#006b7e] rounded-full mt-4"  onPress={handleSignin}>
-                <Text className='text-2xl font-semibold text-white text-center'>Sign in</Text>
+        <TouchableOpacity className="px-8 py-3 bg-[#006b7e] rounded-full mt-4"  onPress={handleSignin} disabled={loading}>
+                <Text className='text-2xl font-semibold text-white text-center'>
+                    {
+                        loading ? 'Loading' : 'Sign in'
+                    }
+                </Text>
         </TouchableOpacity>
 
         <TouchableOpacity className="px-8 py-3 bg-[#006b7e] rounded-full mt-4" onPress={handleBack}>
