@@ -26,7 +26,7 @@ const Signin = () => {
             const data = await res.json()
             if(res.ok){
                 signInSuccess(data)
-                router.replace('/Table')
+                router.replace('/(tabs)/Profile')
             }else{
                 signInFailure(data.message)
             }
