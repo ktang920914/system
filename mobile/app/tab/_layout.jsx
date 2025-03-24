@@ -13,7 +13,8 @@ export default function _Layout() {
       <Tabs.Screen name="Table" options={{ title: 'Table', tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="table-bar" size={28} color={color} />
           ), }} />
-  <Tabs.Screen name="Profile" options={{ title: 'Home', tabBarIcon: ({ color, size }) => (
+
+      <Tabs.Screen name="Profile" options={{ title: 'Home', tabBarIcon: ({ color, size }) => (
             <AntDesign name="user" size={22} color={color} />
           ), }} />
 </Tabs>
