@@ -82,7 +82,7 @@ export default function Table() {
           <Text className="text-lg font-bold">{item.tablename}</Text>
           <Text className="text-gray-700">Area: {getAreaNameById(item.area)}</Text>
           <Text className="text-gray-700">
-            Status: {item.reserve.status ? 'Reserved' : 'Open'}
+            Status: {item.reserve.status ? 'Booked' : 'Opened'}
           </Text>
         </View>
       </TouchableOpacity>
@@ -93,6 +93,8 @@ export default function Table() {
     <View className="flex-1 p-4 bg-white">
       <View className="flex-row justify-between mb-4">
         <Picker
+          style={{height:50, width:150}}
+          itemStyle={{color:"black"}}
           selectedValue={selectedArea}
           className="h-12 w-40"
           onValueChange={(itemValue) => setSelectedArea(itemValue)}
@@ -103,6 +105,8 @@ export default function Table() {
           ))}
         </Picker>
         <Picker
+          style={{height:50, width:150}}
+          itemStyle={{color:'black'}}
           selectedValue={selectedStatus}
           className="h-12 w-40"
           onValueChange={(itemValue) => setSelectedStatus(itemValue)}
