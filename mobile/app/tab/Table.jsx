@@ -58,10 +58,6 @@ export default function Table() {
     return area ? area.areaname : 'Unknown Area';
   };
 
-  const handleOrderPress = (table) => {
-    navigation.navigate('Order', { table });
-  };
-
   const renderTableItem = ({ item }) => {
     let backgroundColor = 'bg-green-200';
     if (item.open.status) {
@@ -74,10 +70,9 @@ export default function Table() {
     const isClickable = backgroundColor === 'bg-yellow-200';
 
     return (
-      <TouchableOpacity 
-        onPress={() => isClickable && handleOrderPress(item)} 
-        disabled={!isClickable}
-      >
+      <TouchableOpacity
+      disabled={!isClickable}
+        onPress={() => navigation.navigate('Order', { table: item })}>
         <View className={`flex-1 m-2 p-5 rounded-lg ${backgroundColor}`}>
           <Text className="text-lg font-bold">{item.tablename}</Text>
           <Text className="text-gray-700">Area: {getAreaNameById(item.area)}</Text>
