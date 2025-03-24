@@ -1,4 +1,4 @@
-import { View, Text, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from '@react-navigation/native';
@@ -12,6 +12,7 @@ export default function Table() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Fetch data on mount
   useEffect(() => {
@@ -58,6 +59,17 @@ export default function Table() {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([fetchTables(), fetchAreas()]);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   // Filter tables based on selections
   const filteredTables = useMemo(() => {
     console.log('FILTERING - Status:', selectedStatus, 'Area:', selectedArea);
@@ -82,15 +94,15 @@ export default function Table() {
   // Memoized table item renderer
   const renderTableItem = useCallback(({ item }) => {
     let backgroundColor = 'bg-green-200';
-    let statusText = 'Available';
+    let statusText = 'Available ';
     let isClickable = false;
 
     if (item.reserve?.status) {
       backgroundColor = 'bg-red-200';
-      statusText = 'Booked';
+      statusText = 'Reserved';
     } else if (item.open?.status) {
       backgroundColor = 'bg-yellow-200';
-      statusText = 'Opened';
+      statusText = 'Opened   ';
       isClickable = true;
     }
 
@@ -112,14 +124,21 @@ export default function Table() {
   const handleStatusChange = (itemValue) => {
     console.log('STATUS CHANGED:', itemValue);
     setSelectedStatus(itemValue);
-    setRefreshKey(prev => prev + 1); // Force re-render
+    setRefreshKey(prev => prev + 1);
   };
 
   // Handler for area changes
   const handleAreaChange = (itemValue) => {
     console.log('AREA CHANGED:', itemValue);
     setSelectedArea(itemValue);
-    setRefreshKey(prev => prev + 1); // Force re-render
+    setRefreshKey(prev => prev + 1);
+  };
+
+  // Reset all filters
+  const resetAllFilters = () => {
+    setSelectedArea(null);
+    setSelectedStatus(null);
+    setRefreshKey(prev => prev + 1);
   };
 
   // Loading state
@@ -150,32 +169,45 @@ export default function Table() {
     );
   }
 
-  // Main render
   return (
     <View className="flex-1 p-4 bg-white" key={refreshKey}>
       {/* Filter controls */}
-      <View className="flex-row justify-between mb-4">
-        <Picker
-          style={{ height: 50, width: 150 }}
-          selectedValue={selectedArea}
-          onValueChange={handleAreaChange}
-        >
-          <Picker.Item label="All Areas" value={null} />
-          {areas.map((area) => (
-            <Picker.Item key={area._id} label={area.areaname} value={area._id} />
-          ))}
-        </Picker>
+      <View className="flex-row justify-between mb-2">
+        <View className="flex-row items-center">
+          <Picker
+            style={{height:50, width:150}}
+            className="h-12 w-40"
+            selectedValue={selectedArea}
+            onValueChange={handleAreaChange}
+          >
+            <Picker.Item label="Areas" value={null} />
+            {areas.map((area) => (
+              <Picker.Item key={area._id} label={area.areaname} value={area._id} />
+            ))}
+          </Picker>
+        </View>
         
-        <Picker
-          style={{ height: 50, width: 200 }}
-          selectedValue={selectedStatus}
-          onValueChange={handleStatusChange}
-        >
-          <Picker.Item label="All Status" value={null} />
-          <Picker.Item label="Reservation" value="reservation" />
-          <Picker.Item label="Open" value="open" />
-        </Picker>
+        <View className="flex-row items-center">
+          <Picker
+            style={{height:50, width:150}}
+            className="h-12 w-40"
+            selectedValue={selectedStatus}
+            onValueChange={handleStatusChange}
+          >
+            <Picker.Item label="Status" value={null} />
+            <Picker.Item label="Reservation" value="reservation" />
+            <Picker.Item label="Open" value="open" />
+          </Picker>
+        </View>
       </View>
+
+      {/* Reset all button */}
+      <TouchableOpacity 
+        className="mb-4 p-3 bg-blue-500 rounded items-center"
+        onPress={resetAllFilters}
+      >
+        <Text className="text-white font-bold">Reset All Filters</Text>
+      </TouchableOpacity>
 
       {/* Table list */}
       {filteredTables.length === 0 ? (
@@ -189,7 +221,15 @@ export default function Table() {
           keyExtractor={(item) => item._id}
           numColumns={2}
           contentContainerStyle={{ paddingBottom: 20 }}
-          extraData={refreshKey} // Force updates
+          extraData={refreshKey}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#3498db']}
+              tintColor="#3498db"
+            />
+          }
         />
       )}
     </View>
