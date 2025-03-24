@@ -70,8 +70,14 @@ export default function Table() {
       backgroundColor = 'bg-red-200';
     }
 
+    // 只有状态为 bg-yellow-200 的桌子才能点击
+    const isClickable = backgroundColor === 'bg-yellow-200';
+
     return (
-      <TouchableOpacity onPress={() => handleOrderPress(item)}>
+      <TouchableOpacity 
+        onPress={() => isClickable && handleOrderPress(item)} 
+        disabled={!isClickable}
+      >
         <View className={`flex-1 m-2 p-5 rounded-lg ${backgroundColor}`}>
           <Text className="text-lg font-bold">{item.tablename}</Text>
           <Text className="text-gray-700">Area: {getAreaNameById(item.area)}</Text>
