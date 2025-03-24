@@ -1,4 +1,4 @@
-import { View, Text, FlatList, TouchableOpacity, Image, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Image, ScrollView } from 'react-native';
 import React, { useState, useEffect } from 'react';
 
 export default function Order() {
@@ -18,10 +18,10 @@ export default function Order() {
         if (res.ok) {
           setProducts(data);
           
-          // Extract unique subcategories
+          // Extract unique subcategories with proper null checks
           const uniqueSubs = {};
           data.forEach(product => {
-            if (product.productsub && product.productsub._id) {
+            if (product?.productsub && typeof product.productsub === 'object' && product.productsub !== null && product.productsub._id) {
               uniqueSubs[product.productsub._id] = product.productsub;
             }
           });
@@ -37,9 +37,11 @@ export default function Order() {
     fetchProducts();
   }, []);
 
-  // Filter products by selected subcategory
+  // Filter products by selected subcategory with null check
   const filteredProducts = selectedSubCategory 
-    ? products.filter(product => product.productsub?._id === selectedSubCategory._id)
+    ? products.filter(product => 
+        product?.productsub && product.productsub._id === selectedSubCategory._id
+      )
     : [];
 
   // Handle quantity changes
@@ -59,28 +61,32 @@ export default function Order() {
 
   // Render product item
   const renderProductItem = ({ item }) => (
-    <View style={styles.productItem}>
+    <View className="flex-row p-2.5 border-b border-gray-200 items-center">
       <Image 
-        source={{ uri: item.productimage || 'https://via.placeholder.com/100' }} 
-        style={styles.productImage} 
+        source={require('../../../mobile/assets/images/productImage.png')} 
+        className="w-20 h-20 rounded mr-3.5" 
       />
-      <View style={styles.productInfo}>
-        <Text style={styles.productName}>{item.productname}</Text>
-        <Text style={styles.productPrice}>RM {item.productprice.toFixed(2)}</Text>
+      <View className="flex-1">
+        <Text className="text-base font-bold mb-1">{item?.productname || 'No name'}</Text>
+        <Text className="text-sm text-gray-600 mb-2.5">
+          RM {item?.productprice ? item.productprice.toFixed(2) : '0.00'}
+        </Text>
         
-        <View style={styles.quantityControls}>
+        <View className="flex-row items-center">
           <TouchableOpacity 
-            style={[styles.quantityButton, styles.quantityButtonLeft]}
+            className="bg-[#006b7e] px-2 py-2 rounded-l min-w-[30px] items-center"
             onPress={() => handleQuantityChange(item._id, -1)}
           >
-            <Text style={styles.quantityButtonText}>-</Text>
+            <Text className="text-white text-base font-bold">-</Text>
           </TouchableOpacity>
-          <Text style={styles.quantityText}>{orderItems[item._id] || 0}</Text>
+          <Text className="text-base w-[30px] text-center bg-gray-100 py-2">
+            {orderItems[item._id] || 0}
+          </Text>
           <TouchableOpacity 
-            style={[styles.quantityButton, styles.quantityButtonRight]}
+            className="bg-[#006b7e] px-2 py-2 rounded-r min-w-[30px] items-center"
             onPress={() => handleQuantityChange(item._id, 1)}
           >
-            <Text style={styles.quantityButtonText}>+</Text>
+            <Text className="text-white text-base font-bold">+</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -89,41 +95,40 @@ export default function Order() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View className="flex-1 justify-center items-center">
         <Text>Loading products...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 flex-row bg-white">
       {/* Subcategories List (Left Side) */}
-      <ScrollView style={styles.subCategoriesContainer}>
+      <ScrollView className="w-[30%] bg-gray-100 border-r border-gray-300">
         {subCategories.map(sub => (
           <TouchableOpacity
-            key={sub._id}
-            style={[
-              styles.subCategoryItem,
-              selectedSubCategory?._id === sub._id && styles.selectedSubCategory
-            ]}
+            key={sub?._id || Math.random().toString()}
+            className={`p-3.5 border-b border-gray-300 ${
+              selectedSubCategory?._id === sub?._id ? 'bg-blue-50' : ''
+            }`}
             onPress={() => setSelectedSubCategory(sub)}
           >
-            <Text style={styles.subCategoryText}>{sub.name}</Text>
+            <Text className="text-base">{sub?.name || 'Unnamed Category'}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
       {/* Products List (Right Side) */}
-      <View style={styles.productsContainer}>
+      <View className="w-[70%]">
         {selectedSubCategory ? (
           <FlatList
             data={filteredProducts}
             renderItem={renderProductItem}
-            keyExtractor={item => item._id}
-            contentContainerStyle={styles.productsList}
+            keyExtractor={item => item?._id || Math.random().toString()}
+            contentContainerStyle={{ padding: 10 }}
           />
         ) : (
-          <View style={styles.placeholder}>
+          <View className="flex-1 justify-center items-center">
             <Text>Select a category to view products</Text>
           </View>
         )}
@@ -131,101 +136,3 @@ export default function Order() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-  },
-  subCategoriesContainer: {
-    width: '30%',
-    backgroundColor: '#f5f5f5',
-    borderRightWidth: 1,
-    borderRightColor: '#ddd',
-  },
-  subCategoryItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-  },
-  selectedSubCategory: {
-    backgroundColor: '#e3f2fd',
-  },
-  subCategoryText: {
-    fontSize: 16,
-  },
-  productsContainer: {
-    width: '70%',
-  },
-  productsList: {
-    padding: 10,
-  },
-  productItem: {
-    flexDirection: 'row',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    alignItems: 'center',
-  },
-  productImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 5,
-    marginRight: 15,
-  },
-  productInfo: {
-    flex: 1,
-  },
-  productName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  productPrice: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 10,
-  },
-  quantityControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  quantityButton: {
-    backgroundColor: '#006b7e',
-    padding: 8,
-    borderRadius: 4,
-    minWidth: 30,
-    alignItems: 'center',
-  },
-  quantityButtonLeft: {
-    borderTopRightRadius: 0,
-    borderBottomRightRadius: 0,
-  },
-  quantityButtonRight: {
-    borderTopLeftRadius: 0,
-    borderBottomLeftRadius: 0,
-  },
-  quantityButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  quantityText: {
-    fontSize: 16,
-    width: 30,
-    textAlign: 'center',
-    backgroundColor: '#f0f0f0',
-    paddingVertical: 8,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
