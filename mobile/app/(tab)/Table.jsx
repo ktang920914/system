@@ -109,7 +109,7 @@ export default function Table() {
     return (
       <TouchableOpacity
         disabled={!isClickable}
-        onPress={() => navigation.navigate('Order', { table: item })}
+        onPress={() => navigation.navigate('add-order/Order')}
       >
         <View className={`flex-1 m-2 p-5 rounded-lg ${backgroundColor}`}>
           <Text className="text-lg font-bold">{item.tablename}</Text>
@@ -203,7 +203,7 @@ export default function Table() {
 
       {/* Reset all button */}
       <TouchableOpacity 
-        className="mb-4 p-3 bg-blue-500 rounded items-center"
+        className="mb-4 p-3 bg-[#006b7e] rounded items-center"
         onPress={resetAllFilters}
       >
         <Text className="text-white font-bold">Reset All Filters</Text>
