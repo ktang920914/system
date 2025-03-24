@@ -1,5 +1,5 @@
 import React from 'react';
-import { Redirect, router } from 'expo-router';
+import { router } from 'expo-router';
 import useUserstore from '../store';
 
 const PrivateRoute = (WrappedComponent) => {

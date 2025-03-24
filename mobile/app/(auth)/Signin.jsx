@@ -1,6 +1,6 @@
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native'
 import React, { useEffect, useState } from 'react'
-import { Link, router } from 'expo-router'
+import { router } from 'expo-router'
 import useUserstore from '../../store'
 
 const Signin = () => {
@@ -26,7 +26,7 @@ const Signin = () => {
             const data = await res.json()
             if(res.ok){
                 signInSuccess(data)
-                router.replace('tab/Table')
+                router.replace('(tab)/Table')
             }else{
                 signInFailure(data.message)
             }
