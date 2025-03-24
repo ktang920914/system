@@ -6,6 +6,7 @@ const Combo = () => {
     const [showModal, setShowModal] = useState(false);
     const [comboName, setComboName] = useState('');
     const [option, setOption] = useState(1);
+    const [chooseNumber, setChooseNumber] = useState(1);
     const [productDetails, setProductDetails] = useState([{ productname: '', comboquantity: '' }]);
     const [comboProducts, setComboProducts] = useState([]);
     const [singleProducts, setSingleProducts] = useState([]);
@@ -49,6 +50,11 @@ const Combo = () => {
     };
 
     const handleCreateCombo = async () => {
+        if (chooseNumber > option) {
+            setErrorMessage('Choose number cannot be greater than option');
+            return;
+        }
+
         try {
             const res = await fetch('/api/combo/create-combo', {
                 method: 'POST',
@@ -56,6 +62,7 @@ const Combo = () => {
                 body: JSON.stringify({
                     comboName,
                     option,
+                    chooseNumber,
                     productDetails,
                 }),
             });
@@ -64,6 +71,10 @@ const Combo = () => {
                 setCombos(prev => [...prev, data]);
                 setErrorMessage(null);
                 setShowModal(false);
+                setComboName('');
+                setOption(1);
+                setChooseNumber(1);
+                setProductDetails([{ productname: '', comboquantity: '' }]);
                 fetchCombos();
             } else {
                 setErrorMessage(data.message);
@@ -79,7 +90,7 @@ const Combo = () => {
                 method: 'DELETE',
             });
             if (res.ok) {
-                fetchCombos(); // 重新获取数据
+                fetchCombos();
             } else {
                 const data = await res.json();
                 setErrorMessage(data.message);
@@ -98,6 +109,9 @@ const Combo = () => {
         const value = parseInt(e.target.value, 10);
         setOption(value);
         setProductDetails(Array.from({ length: value }, () => ({ productname: '', comboquantity: '' })));
+        if (chooseNumber > value) {
+            setChooseNumber(value);
+        }
     };
 
     const handleProductDetailChange = (index, field, value) => {
@@ -110,6 +124,7 @@ const Combo = () => {
         setEditingCombo(combo);
         setComboName(combo.comboName._id);
         setOption(combo.option);
+        setChooseNumber(combo.chooseNumber);
         setProductDetails(Array.from({ length: combo.option }, (_, index) => 
             combo.productDetails[index] || { productname: '', comboquantity: '' }
         ));
@@ -117,7 +132,12 @@ const Combo = () => {
     };
 
     const handleEditSubmit = async (e) => {
-        e.preventDefault(); // 确保调用 preventDefault
+        e.preventDefault();
+        if (chooseNumber > option) {
+            setErrorMessage('Choose number cannot be greater than option');
+            return;
+        }
+        
         try {
             const res = await fetch(`/api/combo/update-combo/${editingCombo._id}`, {
                 method: 'PUT',
@@ -125,13 +145,14 @@ const Combo = () => {
                 body: JSON.stringify({
                     comboName,
                     option,
+                    chooseNumber,
                     productDetails,
                 }),
             });
             const data = await res.json();
             if (res.ok) {
                 setShowEditModal(false);
-                fetchCombos(); // 重新获取数据
+                fetchCombos();
             } else {
                 setErrorMessage(data.message);
             }
@@ -140,7 +161,6 @@ const Combo = () => {
         }
     };
 
-    // 新增：根据搜索关键字过滤 combos
     const filteredCombos = combos.filter(combo => {
         const comboNameMatch = combo.comboName && combo.comboName.productname && 
             combo.comboName.productname.toLowerCase().includes(searchKeyword.toLowerCase());
@@ -154,10 +174,7 @@ const Combo = () => {
         return comboNameMatch || productDetailsMatch;
     });
 
-    // 计算总页数
     const totalPages = Math.ceil(filteredCombos.length / ITEMS_PER_PAGE);
-
-    // 获取当前页的数据
     const paginatedCombos = filteredCombos.slice(
         (currentPage - 1) * ITEMS_PER_PAGE,
         currentPage * ITEMS_PER_PAGE
@@ -168,7 +185,6 @@ const Combo = () => {
             <div className='flex items-center justify-between'>
                 <h1 className='text-2xl text-gray-500 font-semibold'>Combos</h1>
                 <div className='flex items-center gap-2'>
-                    {/* 修改：添加搜索功能 */}
                     <TextInput 
                         type='text' 
                         placeholder='Search' 
@@ -182,7 +198,8 @@ const Combo = () => {
             <Table hoverable className='shadow-md mt-4'>
                 <Table.Head>
                     <Table.HeadCell>Combo Name</Table.HeadCell>
-                    <Table.HeadCell>Option</Table.HeadCell>
+                    <Table.HeadCell>Options</Table.HeadCell>
+                    <Table.HeadCell>Choose</Table.HeadCell>
                     <Table.HeadCell>Product Name</Table.HeadCell>
                     <Table.HeadCell>Quantity</Table.HeadCell>
                     <Table.HeadCell>Delete</Table.HeadCell>
@@ -199,6 +216,9 @@ const Combo = () => {
                                         </Table.Cell>
                                         <Table.Cell rowSpan={combo.productDetails.length}>
                                             {combo.option}
+                                        </Table.Cell>
+                                        <Table.Cell rowSpan={combo.productDetails.length}>
+                                            {combo.chooseNumber}
                                         </Table.Cell>
                                     </>
                                 )}
@@ -228,6 +248,7 @@ const Combo = () => {
                 />
             </div>
 
+            {/* Create Combo Modal */}
             <Modal show={showModal} popup onClose={() => setShowModal(false)} size='md'>
                 <Modal.Header />
                 <Modal.Body>
@@ -253,12 +274,25 @@ const Combo = () => {
                                 </Select>
                             </div>
                             <div className='mt-4'>
-                                <Label value='Combo Option' />
+                                <Label value='Total Options' />
                                 <TextInput
                                     type="number"
                                     value={option}
                                     onChange={handleOptionChange}
-                                    placeholder="Enter Combo Option"
+                                    min="1"
+                                    placeholder="Enter total options"
+                                    required
+                                />
+                            </div>
+                            <div className='mt-4'>
+                                <Label value='Choose Number (how many to select)' />
+                                <TextInput
+                                    type="number"
+                                    value={chooseNumber}
+                                    onChange={(e) => setChooseNumber(parseInt(e.target.value))}
+                                    min="1"
+                                    max={option}
+                                    placeholder="Enter number of products to choose"
                                     required
                                 />
                             </div>
@@ -283,6 +317,7 @@ const Combo = () => {
                                             type="number"
                                             value={detail.comboquantity}
                                             onChange={(e) => handleProductDetailChange(index, 'comboquantity', e.target.value)}
+                                            min="1"
                                             placeholder="Enter Product Quantity"
                                             required
                                         />
@@ -295,6 +330,7 @@ const Combo = () => {
                 </Modal.Body>
             </Modal>
 
+            {/* Edit Combo Modal */}
             <Modal show={showEditModal} popup onClose={() => setShowEditModal(false)} size='md'>
                 <Modal.Header />
                 <Modal.Body>
@@ -305,14 +341,27 @@ const Combo = () => {
                                 {errorMessage}
                             </Alert>
                         )}
-                        <form onSubmit={(e) => { e.preventDefault(); handleEditSubmit(e); }}>
+                        <form onSubmit={handleEditSubmit}>
                             <div className='mt-4'>
-                                <Label value='Combo Option' />
+                                <Label value='Total Options' />
                                 <TextInput
                                     type="number"
                                     value={option}
                                     onChange={handleOptionChange}
-                                    placeholder="Enter Combo Option"
+                                    min="1"
+                                    placeholder="Enter total options"
+                                    required
+                                />
+                            </div>
+                            <div className='mt-4'>
+                                <Label value='Choose Number (how many to select)' />
+                                <TextInput
+                                    type="number"
+                                    value={chooseNumber}
+                                    onChange={(e) => setChooseNumber(parseInt(e.target.value))}
+                                    min="1"
+                                    max={option}
+                                    placeholder="Enter number of products to choose"
                                     required
                                 />
                             </div>
@@ -337,6 +386,7 @@ const Combo = () => {
                                             type="number"
                                             value={detail.comboquantity}
                                             onChange={(e) => handleProductDetailChange(index, 'comboquantity', e.target.value)}
+                                            min="1"
                                             placeholder="Enter Product Quantity"
                                             required
                                         />

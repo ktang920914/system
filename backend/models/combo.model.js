@@ -10,6 +10,16 @@ const comboSchema = new mongoose.Schema({
         type: Number,
         required: true,
     },
+    chooseNumber: {
+        type: Number,
+        required: true,
+        validate: {
+            validator: function(value) {
+                return value <= this.option;
+            },
+            message: 'Choose number cannot be greater than option'
+        }
+    },
     productDetails: [{
         productname: {
             type: String,

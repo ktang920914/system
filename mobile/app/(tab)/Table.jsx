@@ -109,7 +109,10 @@ export default function Table() {
     return (
       <TouchableOpacity
         disabled={!isClickable}
-        onPress={() => navigation.navigate('add-order/Order')}
+        onPress={() => navigation.navigate('add-order/Order', {
+          tableId: item._id, 
+          tableName: item.tablename 
+        })}
       >
         <View className={`flex-1 m-2 p-5 rounded-lg ${backgroundColor}`}>
           <Text className="text-lg font-bold">{item.tablename}</Text>

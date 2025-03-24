@@ -1,7 +1,11 @@
 import { View, Text, FlatList, TouchableOpacity, Image, ScrollView } from 'react-native';
 import React, { useState, useEffect } from 'react';
+import { useRoute } from '@react-navigation/native';
 
 export default function Order() {
+  const route = useRoute();
+  const { tableId, tableName } = route.params || {};
+  
   const [products, setProducts] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
   const [selectedSubCategory, setSelectedSubCategory] = useState(null);
@@ -102,36 +106,45 @@ export default function Order() {
   }
 
   return (
-    <View className="flex-1 flex-row bg-white">
-      {/* Subcategories List (Left Side) */}
-      <ScrollView className="w-[30%] bg-gray-100 border-r border-gray-300">
-        {subCategories.map(sub => (
-          <TouchableOpacity
-            key={sub?._id || Math.random().toString()}
-            className={`p-3.5 border-b border-gray-300 ${
-              selectedSubCategory?._id === sub?._id ? 'bg-blue-50' : ''
-            }`}
-            onPress={() => setSelectedSubCategory(sub)}
-          >
-            <Text className="text-base">{sub?.name || 'Unnamed Category'}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+    <View className="flex-1 bg-white">
+      {/* Table Name Header */}
+      <View className="bg-[#006b7e] p-4">
+        <Text className="text-white text-center text-lg font-bold">
+          Table: {tableName || 'No table selected'}
+        </Text>
+      </View>
 
-      {/* Products List (Right Side) */}
-      <View className="w-[70%]">
-        {selectedSubCategory ? (
-          <FlatList
-            data={filteredProducts}
-            renderItem={renderProductItem}
-            keyExtractor={item => item?._id || Math.random().toString()}
-            contentContainerStyle={{ padding: 10 }}
-          />
-        ) : (
-          <View className="flex-1 justify-center items-center">
-            <Text>Select a category to view products</Text>
-          </View>
-        )}
+      <View className="flex-1 flex-row">
+        {/* Subcategories List (Left Side) */}
+        <ScrollView className="w-[30%] bg-gray-100 border-r border-gray-300">
+          {subCategories.map(sub => (
+            <TouchableOpacity
+              key={sub?._id || Math.random().toString()}
+              className={`p-3.5 border-b border-gray-300 ${
+                selectedSubCategory?._id === sub?._id ? 'bg-blue-50' : ''
+              }`}
+              onPress={() => setSelectedSubCategory(sub)}
+            >
+              <Text className="text-base">{sub?.name || 'Unnamed Category'}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Products List (Right Side) */}
+        <View className="w-[70%]">
+          {selectedSubCategory ? (
+            <FlatList
+              data={filteredProducts}
+              renderItem={renderProductItem}
+              keyExtractor={item => item?._id || Math.random().toString()}
+              contentContainerStyle={{ padding: 10 }}
+            />
+          ) : (
+            <View className="flex-1 justify-center items-center">
+              <Text>Select a category to view products</Text>
+            </View>
+          )}
+        </View>
       </View>
     </View>
   );
