@@ -1,8 +1,10 @@
-import { View, Text, FlatList } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { Picker } from '@react-native-picker/picker';
+import { useNavigation } from '@react-navigation/native';
 
 export default function Table() {
+  const navigation = useNavigation();
   const [tables, setTables] = useState([]);
   const [areas, setAreas] = useState([]);
   const [selectedArea, setSelectedArea] = useState('');
@@ -51,29 +53,33 @@ export default function Table() {
     return areaMatch && statusMatch;
   });
 
-  // 将 area _id 转换为 areaname
   const getAreaNameById = (areaId) => {
     const area = areas.find((area) => area._id === areaId);
     return area ? area.areaname : 'Unknown Area';
   };
 
+  const handleOrderPress = (table) => {
+    navigation.navigate('Order', { table });
+  };
+
   const renderTableItem = ({ item }) => {
-    // 动态设置背景颜色
-    let backgroundColor = 'bg-green-200'; // 默认背景颜色
+    let backgroundColor = 'bg-green-200';
     if (item.open.status) {
-      backgroundColor = 'bg-yellow-200'; // open status 为 true
+      backgroundColor = 'bg-yellow-200';
     } else if (item.reserve.status) {
-      backgroundColor = 'bg-red-200'; // reserve status 为 true
+      backgroundColor = 'bg-red-200';
     }
 
     return (
-      <View className={`flex-1 m-2 p-5 rounded-lg ${backgroundColor}`}>
-        <Text className="text-lg font-bold">{item.tablename}</Text>
-        <Text className="text-gray-700">Area: {getAreaNameById(item.area)}</Text>
-        <Text className="text-gray-700">
-          Status: {item.reserve.status ? 'Reserved' : 'Open'}
-        </Text>
-      </View>
+      <TouchableOpacity onPress={() => handleOrderPress(item)}>
+        <View className={`flex-1 m-2 p-5 rounded-lg ${backgroundColor}`}>
+          <Text className="text-lg font-bold">{item.tablename}</Text>
+          <Text className="text-gray-700">Area: {getAreaNameById(item.area)}</Text>
+          <Text className="text-gray-700">
+            Status: {item.reserve.status ? 'Reserved' : 'Open'}
+          </Text>
+        </View>
+      </TouchableOpacity>
     );
   };
 
