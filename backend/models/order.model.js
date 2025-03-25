@@ -1,51 +1,59 @@
 import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema({
-    table:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:'Table',
-        required:true,
+    table: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Table',
+        required: true,
     },
-    ordernumber:{
-        type:String,
-        required:true,
-        unique:true,
+    ordernumber: {
+        type: String,
+        required: true,
+        unique: true,
     },
-    orderitems:[{
-        orderproductname:{
-            type:String,
-            required:true,
+    orderitems: [{
+        orderproductname: {
+            type: String,
+            required: true,
         },
-        orderproductquantity:{
-            type:Number,
-            required:true,
+        orderproductquantity: {
+            type: Number,
+            required: true,
         },
-        orderproductprice:{
-            type:Number,
-            required:true,
+        orderproductprice: {
+            type: Number,
+            required: true,
         },
     }],
-    ordercomboitem:[{
-        comboproductitem:{
-            type:String,
-            required:true,
+    ordercomboitem: [{
+        comboproductitem: {
+            type: String,
         },
-        comboproductquantity:{
-            type:Number,
-            required:true,
+        comboproductquantity: {
+            type: Number,
         },
+        comboproductprice: {
+            type: Number,
+        },
+        combochooseitems: [{
+            combochooseitemname: {
+                type: String,
+            },
+            combochooseitemquantity: {
+                type: Number,
+            },
+        }],
     }],
-    ordertax:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref: 'Product',
-        required:true,
+    servicetax: {
+        type: Number,
+        default: 8,
     },
-    servicetax:{
-        type:Number,
-        default:8
+    saletax: {
+        type: Number,
+        default: 10
     }
-},{timestamps:true})
+}, { timestamps: true });
 
-const Order = mongoose.model('Order', orderSchema)
+const Order = mongoose.model('Order', orderSchema);
 
-export default Order
+export default Order;

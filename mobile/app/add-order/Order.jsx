@@ -1,9 +1,10 @@
 import { View, Text, FlatList, TouchableOpacity, Image, ScrollView, Modal, Alert } from 'react-native';
 import React, { useState, useEffect } from 'react';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 
 export default function Order() {
   const route = useRoute();
+  const navigation = useNavigation();
   const { tableId, tableName } = route.params || {};
   
   const [products, setProducts] = useState([]);
@@ -16,25 +17,21 @@ export default function Order() {
   const [comboSelections, setComboSelections] = useState({});
   const [showComboModal, setShowComboModal] = useState(false);
 
-  // Fetch products, subcategories, and combos
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         
-        // Fetch products
         const productsRes = await fetch('http://192.168.212.66:3000/api/product/get-products');
-        const productsData = await productsRes.json();
-        
-        // Fetch combos
         const combosRes = await fetch('http://192.168.212.66:3000/api/combo/get-combos');
+        
+        const productsData = await productsRes.json();
         const combosData = await combosRes.json();
         
         if (productsRes.ok && combosRes.ok) {
           setProducts(productsData);
           setCombos(combosData);
           
-          // Extract unique subcategories with proper null checks
           const uniqueSubs = {};
           productsData.forEach(product => {
             if (product?.productsub && typeof product.productsub === 'object' && product.productsub !== null && product.productsub._id) {
@@ -53,20 +50,18 @@ export default function Order() {
     fetchData();
   }, []);
 
-  // Filter products by selected subcategory with null check
   const filteredProducts = selectedSubCategory 
     ? products.filter(product => 
         product?.productsub && product.productsub._id === selectedSubCategory._id
       )
     : [];
 
-  // Handle quantity changes for regular products
   const handleQuantityChange = (productId, change) => {
     setOrderItems(prev => {
       const currentQuantity = prev[productId] || 0;
       const newQuantity = currentQuantity + change;
       
-      if (newQuantity < 0) return prev; // Prevent negative quantities
+      if (newQuantity < 0) return prev;
       
       return {
         ...prev,
@@ -75,12 +70,10 @@ export default function Order() {
     });
   };
 
-  // Handle combo selection
   const handleComboPress = (combo) => {
     setSelectedCombo(combo);
     setShowComboModal(true);
     
-    // Initialize selections if not already present
     setComboSelections(prev => {
       if (!prev[combo._id]) {
         return {
@@ -92,12 +85,10 @@ export default function Order() {
     });
   };
 
-  // Handle combo item selection
   const handleComboItemSelect = (comboId, productName, quantity) => {
     setComboSelections(prev => {
       const currentSelections = prev[comboId] || {};
       
-      // Toggle selection - if already selected, remove it, otherwise add it
       if (currentSelections[productName]) {
         const newSelections = {...currentSelections};
         delete newSelections[productName];
@@ -106,7 +97,6 @@ export default function Order() {
           [comboId]: newSelections
         };
       } else {
-        // Check if we've reached the chooseNumber limit
         const combo = combos.find(c => c._id === comboId);
         if (combo && Object.keys(currentSelections).length >= combo.chooseNumber) {
           Alert.alert(
@@ -127,7 +117,6 @@ export default function Order() {
     });
   };
 
-  // Confirm combo selection
   const confirmComboSelection = () => {
     if (!selectedCombo) return;
     
@@ -142,21 +131,20 @@ export default function Order() {
       return;
     }
     
-    // Add the combo to order items
     setOrderItems(prev => ({
       ...prev,
       [`combo_${selectedCombo._id}`]: {
         comboId: selectedCombo._id,
         comboName: selectedCombo.comboName.productname,
         selections: currentSelections,
-        quantity: 1 // Default quantity is 1, can be increased later
+        quantity: 1,
+        price: selectedCombo.comboName.productprice
       }
     }));
     
     setShowComboModal(false);
   };
 
-  // Increase combo quantity
   const increaseComboQuantity = (comboKey) => {
     setOrderItems(prev => {
       const currentItem = prev[comboKey];
@@ -170,7 +158,6 @@ export default function Order() {
     });
   };
 
-  // Decrease combo quantity
   const decreaseComboQuantity = (comboKey) => {
     setOrderItems(prev => {
       const currentItem = prev[comboKey];
@@ -192,13 +179,99 @@ export default function Order() {
     });
   };
 
-  // Render product item
+  const hasOrderItems = Object.values(orderItems).some(item => {
+    if (typeof item === 'number') return item > 0;
+    if (typeof item === 'object' && item.quantity) return item.quantity > 0;
+    return false;
+  });
+
+  const handleOrder = async () => {
+    if (!hasOrderItems) {
+      Alert.alert('Empty Order', 'Please add items to your order before proceeding.');
+      return;
+    }
+
+    try {
+      const orderData = {
+        table: tableId,
+        orderitems: [],
+        ordercomboitem: []
+      };
+
+      Object.entries(orderItems).forEach(([key, value]) => {
+        if (!key.startsWith('combo_')) {
+          const product = products.find(p => p._id === key);
+          if (product) {
+            orderData.orderitems.push({
+              orderproductname: product.productname,
+              orderproductquantity: value,
+              orderproductprice: product.productprice
+            });
+          }
+        } else {
+          // Find the combo data
+          const combo = combos.find(c => c._id === value.comboId);
+          
+          // Create combo choose items array
+          const combochooseitems = [];
+          
+          // Add selected items to combochooseitems
+          Object.entries(value.selections).forEach(([productName, quantity]) => {
+            const productDetail = combo.productDetails.find(
+              detail => detail.productname === productName
+            );
+            
+            if (productDetail) {
+              combochooseitems.push({
+                combochooseitemname: productName,
+                combochooseitemquantity: productDetail.comboquantity
+              });
+            }
+          });
+
+          orderData.ordercomboitem.push({
+            comboproductitem: value.comboName,
+            comboproductquantity: value.quantity,
+            comboproductprice: value.price,
+            combochooseitems: combochooseitems
+          });
+        }
+      });
+
+      const response = await fetch('http://192.168.212.66:3000/api/order/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        navigation.navigate('Bill', {
+          tableName,
+          orderDetails: {
+            ordernumber: result.ordernumber,
+            items: orderData.orderitems,
+            comboItems: orderData.ordercomboitem,
+            createdAt: new Date().toISOString(),
+            taxRate: result.servicetax
+          }
+        });
+      } else {
+        Alert.alert('Error', result.message || 'Failed to create order');
+      }
+    } catch (error) {
+      console.error('Order submission error:', error);
+      Alert.alert('Error', 'An error occurred while submitting the order');
+    }
+  };
+
   const renderProductItem = ({ item }) => {
-    // Check if this is a combo product
     const isCombo = item.productcategory === 'Combo';
     const comboData = isCombo ? combos.find(c => c.comboName._id === item._id) : null;
     
-    // If it's a combo product, render differently
     if (isCombo && comboData) {
       const comboKey = `combo_${comboData._id}`;
       const comboInOrder = orderItems[comboKey];
@@ -215,7 +288,6 @@ export default function Order() {
               RM {item?.productprice ? item.productprice.toFixed(2) : '0.00'}
             </Text>
             
-            {/* Display selected items if combo is in order */}
             {comboInOrder?.selections && (
               <View className="mb-2">
                 {Object.entries(comboInOrder.selections).map(([productName, quantity], index) => (
@@ -257,7 +329,6 @@ export default function Order() {
       );
     }
     
-    // Regular product rendering
     return (
       <View className="flex-row p-2.5 border-b border-gray-200 items-center">
         <Image 
@@ -302,7 +373,6 @@ export default function Order() {
 
   return (
     <View className="flex-1 bg-white">
-      {/* Table Name Header */}
       <View className="bg-[#006b7e] p-4">
         <Text className="text-white text-center text-lg font-bold">
           Table: {tableName || 'No table selected'}
@@ -310,7 +380,6 @@ export default function Order() {
       </View>
 
       <View className="flex-1 flex-row">
-        {/* Subcategories List (Left Side) */}
         <ScrollView className="w-[30%] bg-gray-100 border-r border-gray-300">
           {subCategories.map(sub => (
             <TouchableOpacity
@@ -325,7 +394,6 @@ export default function Order() {
           ))}
         </ScrollView>
 
-        {/* Products List (Right Side) */}
         <View className="w-[70%]">
           {selectedSubCategory ? (
             <FlatList
@@ -342,7 +410,14 @@ export default function Order() {
         </View>
       </View>
 
-      {/* Combo Selection Modal */}
+      <TouchableOpacity
+        className={`p-4 items-center ${hasOrderItems ? 'bg-[#006b7e]' : 'bg-gray-400'}`}
+        onPress={handleOrder}
+        disabled={!hasOrderItems}
+      >
+        <Text className="text-white text-lg font-bold">Proceed Order</Text>
+      </TouchableOpacity>
+
       <Modal
         visible={showComboModal}
         animationType="slide"
