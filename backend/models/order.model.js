@@ -8,8 +8,8 @@ const orderSchema = new mongoose.Schema({
     ordernumber:{
         type:String,
         required:true,
-        unique:true
-    }
+        unique:true,
+    },
 },{timestamps:true})
 
 const Order = mongoose.model('Order', orderSchema)

@@ -215,6 +215,17 @@ export default function Order() {
               RM {item?.productprice ? item.productprice.toFixed(2) : '0.00'}
             </Text>
             
+            {/* Display selected items if combo is in order */}
+            {comboInOrder?.selections && (
+              <View className="mb-2">
+                {Object.entries(comboInOrder.selections).map(([productName, quantity], index) => (
+                  <Text key={index} className="text-xs text-gray-500">
+                    • {productName} (x{quantity})
+                  </Text>
+                ))}
+              </View>
+            )}
+            
             {comboInOrder ? (
               <View className="flex-row items-center">
                 <TouchableOpacity 
