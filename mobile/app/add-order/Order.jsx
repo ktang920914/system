@@ -1,10 +1,10 @@
 import { View, Text, FlatList, TouchableOpacity, Image, ScrollView, Modal, Alert } from 'react-native';
 import React, { useState, useEffect } from 'react';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
+import { router } from 'expo-router';
 
 export default function Order() {
   const route = useRoute();
-  const navigation = useNavigation();
   const { tableId, tableName } = route.params || {};
   
   const [products, setProducts] = useState([]);
@@ -249,14 +249,17 @@ export default function Order() {
       const result = await response.json();
 
       if (response.ok) {
-        navigation.navigate('Bill', {
-          tableName,
-          orderDetails: {
-            ordernumber: result.ordernumber,
-            items: orderData.orderitems,
-            comboItems: orderData.ordercomboitem,
-            createdAt: new Date().toISOString(),
-            taxRate: result.servicetax
+        router.replace({
+          pathname: '/(tab)/Bill',
+          params: {
+            tableName,
+            orderDetails: JSON.stringify({
+              ordernumber: result.ordernumber,
+              items: orderData.orderitems,
+              comboItems: orderData.ordercomboitem,
+              createdAt: new Date().toISOString(),
+              taxRate: result.servicetax
+            })
           }
         });
       } else {

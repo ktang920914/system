@@ -1,16 +1,19 @@
 import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import React, { useEffect } from 'react';
-import { useRoute } from '@react-navigation/native';
+import { useLocalSearchParams } from 'expo-router';
 
 export default function Bill() {
-  const route = useRoute();
-  const { tableName, orderDetails } = route.params || {};
+  const params = useLocalSearchParams();
+  const { tableName, orderDetails } = params || {};
+  
+  // Parse the stringified orderDetails
+  const parsedOrderDetails = orderDetails ? JSON.parse(orderDetails) : null;
 
   useEffect(() => {
-    console.log('Received params:', route.params);
-  }, [route.params]);
+    console.log('Received params:', params);
+  }, [params]);
 
-  if (!orderDetails) {
+  if (!parsedOrderDetails) {
     return (
       <View style={styles.container}>
         <Text>No order details available</Text>
@@ -22,12 +25,12 @@ export default function Bill() {
     let subtotal = 0;
     
     // Regular items
-    orderDetails.items.forEach(item => {
+    parsedOrderDetails.items.forEach(item => {
       subtotal += item.orderproductprice * item.orderproductquantity;
     });
     
     // Combo items
-    orderDetails.comboItems.forEach(combo => {
+    parsedOrderDetails.comboItems.forEach(combo => {
       subtotal += combo.comboproductprice * combo.comboproductquantity;
     });
     
@@ -35,7 +38,7 @@ export default function Bill() {
   };
 
   const subtotal = calculateSubtotal();
-  const taxRate = orderDetails.taxRate / 100 || 0.08;
+  const taxRate = parsedOrderDetails.taxRate / 100 || 0.08;
   const taxAmount = subtotal * taxRate;
   const totalAmount = subtotal + taxAmount;
 
@@ -47,16 +50,16 @@ export default function Bill() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Order #{orderDetails.ordernumber}</Text>
+        <Text style={styles.sectionTitle}>Order #{parsedOrderDetails.ordernumber}</Text>
         <Text style={styles.dateText}>
-          {new Date(orderDetails.createdAt).toLocaleString()}
+          {new Date(parsedOrderDetails.createdAt).toLocaleString()}
         </Text>
       </View>
 
       {/* Regular Items */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Items:</Text>
-        {orderDetails.items.map((item, index) => (
+        {parsedOrderDetails.items.map((item, index) => (
           <View key={index} style={styles.itemRow}>
             <Text style={styles.itemName}>{item.orderproductname}</Text>
             <View style={styles.itemDetails}>
@@ -69,7 +72,7 @@ export default function Bill() {
         ))}
 
         {/* Combo Items */}
-        {orderDetails.comboItems.map((combo, index) => (
+        {parsedOrderDetails.comboItems.map((combo, index) => (
           <View key={`combo-${index}`} style={styles.itemRow}>
             <Text style={styles.itemName}>{combo.comboproductitem} (Combo)</Text>
             <View style={styles.itemDetails}>
@@ -89,7 +92,7 @@ export default function Bill() {
           <Text style={styles.totalValue}>RM {subtotal.toFixed(2)}</Text>
         </View>
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Tax ({orderDetails.taxRate || 8}%):</Text>
+          <Text style={styles.totalLabel}>Tax ({parsedOrderDetails.taxRate || 8}%):</Text>
           <Text style={styles.totalValue}>RM {taxAmount.toFixed(2)}</Text>
         </View>
         <View style={[styles.totalRow, styles.grandTotal]}>
