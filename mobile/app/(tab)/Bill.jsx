@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import React, { useEffect } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 
@@ -14,7 +14,7 @@ export default function Bill() {
 
   if (!parsedOrderDetails) {
     return (
-      <View style={styles.container}>
+      <View className="flex-1 items-center justify-center">
         <Text>No order details available</Text>
       </View>
     );
@@ -40,28 +40,28 @@ export default function Bill() {
   const totalAmount = subtotal + taxAmount;
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerText}>Order Bill</Text>
-        <Text style={styles.tableText}>Table: {tableName}</Text>
+    <ScrollView className="flex-1 bg-white p-4">
+      <View className="mb-5 border-b border-gray-200 pb-2.5">
+        <Text className="text-2xl font-bold text-center">Order Bill</Text>
+        <Text className="text-lg text-center mt-1 text-gray-600">Table: {tableName}</Text>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Order #{parsedOrderDetails.ordernumber}</Text>
-        <Text style={styles.dateText}>
+      <View className="mb-5">
+        <Text className="text-lg font-bold mb-2.5">Order #{parsedOrderDetails.ordernumber}</Text>
+        <Text className="text-gray-500 mb-2.5">
           {new Date(parsedOrderDetails.createdAt).toLocaleString()}
         </Text>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Items:</Text>
+      <View className="mb-5">
+        <Text className="text-lg font-bold mb-2.5">Items:</Text>
         
         {parsedOrderDetails.items.map((item, index) => (
-          <View key={`item-${index}`} style={styles.itemRow}>
-            <Text style={styles.itemName}>{item.orderproductname}</Text>
-            <View style={styles.itemDetails}>
-              <Text style={styles.itemQuantity}>x{item.orderproductquantity}</Text>
-              <Text style={styles.itemPrice}>
+          <View key={`item-${index}`} className="flex-row justify-between mb-2 pb-2 border-b border-gray-100">
+            <Text className="text-base flex-2">{item.orderproductname}</Text>
+            <View className="flex-1 flex-row justify-between">
+              <Text className="text-base text-gray-600">x{item.orderproductquantity}</Text>
+              <Text className="text-base font-bold">
                 RM {(item.orderproductprice * item.orderproductquantity).toFixed(2)}
               </Text>
             </View>
@@ -70,142 +70,39 @@ export default function Bill() {
 
         {parsedOrderDetails.comboItems.map((combo, index) => (
           <View key={`combo-${index}`}>
-            <View style={styles.itemRow}>
-              <Text style={styles.itemName}>{combo.comboproductitem} (Combo)</Text>
-              <View style={styles.itemDetails}>
-                <Text style={styles.itemQuantity}>x{combo.comboproductquantity}</Text>
-                <Text style={styles.itemPrice}>
+            <View className="flex-row justify-between mb-2 pb-2 border-b border-gray-100">
+              <Text className="text-base flex-2">{combo.comboproductitem} (Combo)</Text>
+              <View className="flex-1 flex-row justify-between">
+                <Text className="text-base text-gray-600">x{combo.comboproductquantity}</Text>
+                <Text className="text-base font-bold">
                   RM {(combo.comboproductprice * combo.comboproductquantity).toFixed(2)}
                 </Text>
               </View>
             </View>
             
             {combo.combochooseitems.map((item, itemIndex) => (
-              <View key={`combo-item-${index}-${itemIndex}`} style={styles.comboItem}>
-                <Text style={styles.comboItemText}>• {item.combochooseitemname} (x{item.combochooseitemquantity})</Text>
+              <View key={`combo-item-${index}-${itemIndex}`} className="pl-5 mb-1">
+                <Text className="text-sm text-gray-500">• {item.combochooseitemname} (x{item.combochooseitemquantity})</Text>
               </View>
             ))}
           </View>
         ))}
       </View>
 
-      <View style={styles.totalsSection}>
-        <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Subtotal:</Text>
-          <Text style={styles.totalValue}>RM {subtotal.toFixed(2)}</Text>
+      <View className="mt-5 border-t border-gray-200 pt-2.5">
+        <View className="flex-row justify-between mb-2">
+          <Text className="text-base">Subtotal:</Text>
+          <Text className="text-base font-bold">RM {subtotal.toFixed(2)}</Text>
         </View>
-        <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Tax ({parsedOrderDetails.taxRate || 8}%):</Text>
-          <Text style={styles.totalValue}>RM {taxAmount.toFixed(2)}</Text>
+        <View className="flex-row justify-between mb-2">
+          <Text className="text-base">Tax ({parsedOrderDetails.taxRate || 8}%):</Text>
+          <Text className="text-base font-bold">RM {taxAmount.toFixed(2)}</Text>
         </View>
-        <View style={[styles.totalRow, styles.grandTotal]}>
-          <Text style={styles.grandTotalLabel}>Total:</Text>
-          <Text style={styles.grandTotalValue}>RM {totalAmount.toFixed(2)}</Text>
+        <View className="flex-row justify-between mb-2 mt-2.5 pt-2.5 border-t border-gray-200">
+          <Text className="text-lg font-bold">Total:</Text>
+          <Text className="text-lg font-bold text-teal-700">RM {totalAmount.toFixed(2)}</Text>
         </View>
       </View>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    padding: 16,
-  },
-  header: {
-    marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    paddingBottom: 10,
-  },
-  headerText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  tableText: {
-    fontSize: 18,
-    textAlign: 'center',
-    marginTop: 5,
-    color: '#555',
-  },
-  section: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  dateText: {
-    color: '#666',
-    marginBottom: 10,
-  },
-  itemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  itemName: {
-    fontSize: 16,
-    flex: 2,
-  },
-  itemDetails: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  itemQuantity: {
-    fontSize: 16,
-    color: '#555',
-  },
-  itemPrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  comboItem: {
-    paddingLeft: 20,
-    marginBottom: 4,
-  },
-  comboItemText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  totalsSection: {
-    marginTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    paddingTop: 10,
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  totalLabel: {
-    fontSize: 16,
-  },
-  totalValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  grandTotal: {
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-  },
-  grandTotalLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  grandTotalValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#006b7e',
-  },
-});
