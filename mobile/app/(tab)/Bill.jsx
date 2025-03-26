@@ -60,7 +60,7 @@ export default function Bill() {
           <View key={`item-${index}`} className="flex-row justify-between mb-2 pb-2 border-b border-gray-100">
             <Text className="text-base flex-2">{item.orderproductname}</Text>
             <View className="flex-1 flex-row justify-between">
-              <Text className="text-base text-gray-600">x{item.orderproductquantity}</Text>
+              <Text className="text-base text-gray-600"> x{item.orderproductquantity}</Text>
               <Text className="text-base font-bold">
                 RM {(item.orderproductprice * item.orderproductquantity).toFixed(2)}
               </Text>
@@ -73,7 +73,7 @@ export default function Bill() {
             <View className="flex-row justify-between mb-2 pb-2 border-b border-gray-100">
               <Text className="text-base flex-2">{combo.comboproductitem} (Combo)</Text>
               <View className="flex-1 flex-row justify-between">
-                <Text className="text-base text-gray-600">x{combo.comboproductquantity}</Text>
+                <Text className="text-base text-gray-600"> x{combo.comboproductquantity}</Text>
                 <Text className="text-base font-bold">
                   RM {(combo.comboproductprice * combo.comboproductquantity).toFixed(2)}
                 </Text>
