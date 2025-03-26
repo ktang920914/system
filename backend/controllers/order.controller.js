@@ -27,30 +27,28 @@ export const createOrder = async (req, res, next) => {
             }))
         }));
 
+        // 计算小计和总计
+        const subtotal = [
+            ...validatedOrderItems.map(i => i.orderproductprice * i.orderproductquantity),
+            ...validatedComboItems.map(c => c.comboproductprice * c.comboproductquantity)
+        ].reduce((sum, amount) => sum + amount, 0);
+
+        const taxRate = 0.08; // 8%
+        const ordertotal = subtotal * (1 + taxRate);
+
         // Create new order
         const newOrder = new Order({
             table,
             ordernumber,
             orderitems: validatedOrderItems,
             ordercomboitem: validatedComboItems,
+            subtotal,
+            ordertotal,
             servicetax: 8
         });
         
         await newOrder.save();
 
-        // 额外验证：检查所有价格是否为有效数字
-        const hasInvalidPrices = [
-            ...validatedOrderItems.map(i => isNaN(i.orderproductprice)),
-            ...validatedComboItems.map(c => isNaN(c.comboproductprice))
-          ].some(Boolean);
-      
-          if (hasInvalidPrices) {
-            return res.status(400).json({
-              success: false,
-              message: 'Invalid price values detected'
-            });
-          }
-            
         res.status(201).json({
             success: true,
             ordernumber: newOrder.ordernumber,
@@ -96,11 +94,22 @@ export const updateOrder = async (req, res, next) => {
             }))
         }));
         
+        // 计算新的小计和总计
+        const subtotal = [
+            ...validatedOrderItems.map(i => i.orderproductprice * i.orderproductquantity),
+            ...validatedComboItems.map(c => c.comboproductprice * c.comboproductquantity)
+        ].reduce((sum, amount) => sum + amount, 0);
+
+        const taxRate = 0.08; // 8%
+        const ordertotal = subtotal * (1 + taxRate);
+
         const updatedOrder = await Order.findOneAndUpdate(
             { ordernumber },
             {
                 orderitems: validatedOrderItems,
-                ordercomboitem: validatedComboItems
+                ordercomboitem: validatedComboItems,
+                subtotal,
+                ordertotal
             },
             { new: true }
         );
@@ -141,3 +150,33 @@ export const deleteOrder = async (req, res, next) => {
         next(error);
     }
 };
+
+export const updateOrderTotals = async (req, res, next) => {
+    try {
+      const { ordernumber } = req.params;
+      const { subtotal, ordertotal } = req.body;
+      
+      const updatedOrder = await Order.findOneAndUpdate(
+        { ordernumber },
+        {
+          subtotal: Number(subtotal),
+          ordertotal: Number(ordertotal)
+        },
+        { new: true }
+      );
+      
+      if (!updatedOrder) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found'
+        });
+      }
+      
+      res.status(200).json({
+        success: true,
+        order: updatedOrder
+      });
+    } catch (error) {
+      next(error);
+    }
+  };

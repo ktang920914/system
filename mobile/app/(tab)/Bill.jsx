@@ -99,17 +99,40 @@ export default function Bill() {
     });
   };
 
-  const handlePay = () => {
-    Alert.alert('Payment', 'Proceeding to payment...');
+  const handlePay = async () => {
+    try {
+      const subtotal = calculateSubtotal();
+      const taxRate = parsedOrderDetails?.taxRate / 100 || 0.08;
+      const taxAmount = subtotal * taxRate;
+      const totalAmount = subtotal + taxAmount;
+  
+      const response = await fetch(
+        `http://192.168.212.66:3000/api/order/update-order-totals/${parsedOrderDetails.ordernumber}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            subtotal: subtotal,
+            ordertotal: totalAmount
+          }),
+        }
+      );
+  
+      const result = await response.json();
+      
+      if (response.ok) {
+        Alert.alert('Success', 'Payment processed successfully');
+        // 导航到支付完成页面或其他操作
+      } else {
+        Alert.alert('Error', result.message || 'Payment failed');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      Alert.alert('Error', 'An error occurred during payment');
+    }
   };
-
-  if (!parsedOrderDetails) {
-    return (
-      <View className="flex-1 items-center justify-center">
-        <Text>No order details available</Text>
-      </View>
-    );
-  }
 
   return (
     <ScrollView className="flex-1 bg-white p-4">
