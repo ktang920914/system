@@ -1,15 +1,9 @@
 import Order from "../models/order.model.js";
+import {Product} from "../models/product.model.js";
 
 export const createOrder = async (req, res, next) => {
     try {
-        const { table, orderitems, ordercomboitem = [] } = req.body; // Default to empty array
-        
-        // Debug logging
-        console.log("Incoming order data:", {
-            table,
-            orderitems,
-            ordercomboitem
-        });
+        const { table, orderitems, ordercomboitem = [] } = req.body;
 
         // Generate order number
         const now = new Date();
@@ -17,87 +11,75 @@ export const createOrder = async (req, res, next) => {
         const randomPart = Math.floor(1000 + Math.random() * 9000);
         const ordernumber = `ORD-${datePart}-${randomPart}`;
         
-        // Validate and convert numeric fields with stricter validation
-        const validatedOrderItems = (orderitems || []).map(item => {
+        // Validate and convert numeric fields with product tax rates
+        const validatedOrderItems = await Promise.all((orderitems || []).map(async (item) => {
+            const product = await Product.findOne({ productname: item.orderproductname });
+            const taxRate = product?.producttax || 0;
+            
             const quantity = Number(item.orderproductquantity) || 0;
             const price = Number(item.orderproductprice) || 0;
-            const tax = Number(item.orderproducttax) || 0;
             
             if (isNaN(quantity)) throw new Error(`Invalid quantity for item: ${item.orderproductname}`);
             if (isNaN(price)) throw new Error(`Invalid price for item: ${item.orderproductname}`);
-            if (isNaN(tax)) throw new Error(`Invalid tax rate for item: ${item.orderproductname}`);
             
             return {
                 ...item,
                 orderproductquantity: quantity,
                 orderproductprice: price,
-                orderproducttax: tax
+                orderproducttax: taxRate // Use product's tax rate
             };
-        });
+        }));
 
-        const validatedComboItems = (ordercomboitem || []).map(combo => {
+        const validatedComboItems = await Promise.all((ordercomboitem || []).map(async (combo) => {
+            const product = await Product.findOne({ productname: combo.comboproductitem });
+            const taxRate = product?.producttax || 0;
+            
             const quantity = Number(combo.comboproductquantity) || 0;
             const price = Number(combo.comboproductprice) || 0;
-            const tax = Number(combo.comboproducttax) || 0;
             
             if (isNaN(quantity)) throw new Error(`Invalid quantity for combo: ${combo.comboproductitem}`);
             if (isNaN(price)) throw new Error(`Invalid price for combo: ${combo.comboproductitem}`);
-            if (isNaN(tax)) throw new Error(`Invalid tax rate for combo: ${combo.comboproductitem}`);
             
             return {
                 ...combo,
                 comboproductquantity: quantity,
                 comboproductprice: price,
-                comboproducttax: tax,
+                comboproducttax: taxRate, // Use product's tax rate
                 combochooseitems: (combo.combochooseitems || []).map(chooseItem => ({
                     ...chooseItem,
                     combochooseitemquantity: Number(chooseItem.combochooseitemquantity) || 0
                 }))
             };
-        });
+        }));
 
-        // Calculate totals with detailed logging
+        // Calculate totals
         let subtotal = 0;
         let taxtotal = 0;
 
-        console.log("Calculating regular items:");
         validatedOrderItems.forEach(item => {
             const itemTotal = item.orderproductprice * item.orderproductquantity;
             subtotal += itemTotal;
             
             const itemTax = itemTotal * (item.orderproducttax / 100);
-            if (item.orderproducttax > 0) {
-                taxtotal += itemTax;
-                console.log(`Item ${item.orderproductname}: Price=${item.orderproductprice}, Qty=${item.orderproductquantity}, TaxRate=${item.orderproducttax}%, Tax=${itemTax}`);
-            }
+            taxtotal += itemTax;
         });
 
-        console.log("Calculating combo items:");
         validatedComboItems.forEach(combo => {
             const comboTotal = combo.comboproductprice * combo.comboproductquantity;
             subtotal += comboTotal;
             
             const comboTax = comboTotal * (combo.comboproducttax / 100);
-            if (combo.comboproducttax > 0) {
-                taxtotal += comboTax;
-                console.log(`Combo ${combo.comboproductitem}: Price=${combo.comboproductprice}, Qty=${combo.comboproductquantity}, TaxRate=${combo.comboproducttax}%, Tax=${comboTax}`);
-            }
+            taxtotal += comboTax;
         });
 
         const ordertotal = subtotal + taxtotal;
-
-        console.log("Final totals:", {
-            subtotal,
-            taxtotal,
-            ordertotal
-        });
 
         // Create new order
         const newOrder = new Order({
             table,
             ordernumber,
             orderitems: validatedOrderItems,
-            ordercomboitem: validatedComboItems, // Make sure this matches your schema
+            ordercomboitem: validatedComboItems,
             subtotal,
             taxtotal,
             ordertotal
@@ -136,47 +118,49 @@ export const updateOrder = async (req, res, next) => {
         const { ordernumber } = req.params;
         const { orderitems, ordercomboitem } = req.body;
         
-        // Validate and convert numeric fields
-        const validatedOrderItems = orderitems.map(item => ({
-            ...item,
-            orderproductquantity: Number(item.orderproductquantity),
-            orderproductprice: Number(item.orderproductprice),
-            orderproducttax: Number(item.orderproducttax || 0)
+        // Validate and convert numeric fields with product tax rates
+        const validatedOrderItems = await Promise.all(orderitems.map(async (item) => {
+            const product = await Product.findOne({ productname: item.orderproductname });
+            const taxRate = product?.producttax || 0;
+            
+            return {
+                ...item,
+                orderproductquantity: Number(item.orderproductquantity),
+                orderproductprice: Number(item.orderproductprice),
+                orderproducttax: taxRate // Use product's tax rate
+            };
         }));
 
-        const validatedComboItems = ordercomboitem.map(combo => ({
-            ...combo,
-            comboproductquantity: Number(combo.comboproductquantity),
-            comboproductprice: Number(combo.comboproductprice),
-            comboproducttax: Number(combo.comboproducttax || 0),
-            combochooseitems: combo.combochooseitems.map(chooseItem => ({
-                ...chooseItem,
-                combochooseitemquantity: Number(chooseItem.combochooseitemquantity)
-            }))
+        const validatedComboItems = await Promise.all(ordercomboitem.map(async (combo) => {
+            const product = await Product.findOne({ productname: combo.comboproductitem });
+            const taxRate = product?.producttax || 0;
+            
+            return {
+                ...combo,
+                comboproductquantity: Number(combo.comboproductquantity),
+                comboproductprice: Number(combo.comboproductprice),
+                comboproducttax: taxRate, // Use product's tax rate
+                combochooseitems: combo.combochooseitems.map(chooseItem => ({
+                    ...chooseItem,
+                    combochooseitemquantity: Number(chooseItem.combochooseitemquantity)
+                }))
+            };
         }));
         
         // Calculate new subtotal and tax
         let subtotal = 0;
         let taxtotal = 0;
 
-        // Process regular items
         validatedOrderItems.forEach(item => {
             const itemTotal = item.orderproductprice * item.orderproductquantity;
             subtotal += itemTotal;
-            
-            if (item.orderproducttax > 0) {
-                taxtotal += itemTotal * (item.orderproducttax / 100);
-            }
+            taxtotal += itemTotal * (item.orderproducttax / 100);
         });
 
-        // Process combo items
         validatedComboItems.forEach(combo => {
             const comboTotal = combo.comboproductprice * combo.comboproductquantity;
             subtotal += comboTotal;
-            
-            if (combo.comboproducttax > 0) {
-                taxtotal += comboTotal * (combo.comboproducttax / 100);
-            }
+            taxtotal += comboTotal * (combo.comboproducttax / 100);
         });
 
         const ordertotal = subtotal + taxtotal;
