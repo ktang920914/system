@@ -7,6 +7,7 @@ export default function Order() {
   const route = useRoute();
   const { tableId, tableName, existingOrder } = route.params || {};
   
+  // State declarations
   const [products, setProducts] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
   const [selectedSubCategory, setSelectedSubCategory] = useState(null);
@@ -18,6 +19,7 @@ export default function Order() {
   const [currentComboAction, setCurrentComboAction] = useState(null);
   const [selectedComboChoices, setSelectedComboChoices] = useState([]);
 
+  // Fetch products and combos data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -37,6 +39,7 @@ export default function Order() {
           setProducts(productsData);
           setCombos(combosData);
           
+          // Extract unique subcategories
           const uniqueSubs = {};
           productsData.forEach(product => {
             if (product?.productsub) {
@@ -45,64 +48,79 @@ export default function Order() {
           });
           setSubCategories(Object.values(uniqueSubs));
           
+          // Initialize with existing order if provided
           if (existingOrder) {
-            const parsedOrder = JSON.parse(existingOrder);
-            const newOrderItems = {};
-            
-            parsedOrder.items.forEach(item => {
-              const product = productsData.find(p => p.productname === item.orderproductname);
-              if (product) {
-                newOrderItems[product._id] = item.orderproductquantity;
-              }
-            });
-            
-            parsedOrder.comboItems.forEach(combo => {
-              const comboData = combosData.find(c => 
-                c.comboName.productname === combo.comboproductitem
-              );
-              if (comboData) {
-                const comboKey = `combo_${comboData._id}`;
-                
-                // 将选择项按数量分组
-                const selectionGroups = [];
-                const itemsPerGroup = comboData.chooseNumber;
-                const totalItems = combo.combochooseitems.length;
-                
-                for (let i = 0; i < totalItems; i += itemsPerGroup) {
-                  selectionGroups.push(
-                    combo.combochooseitems.slice(i, i + itemsPerGroup)
-                  );
-                }
-                
-                newOrderItems[comboKey] = {
-                  comboId: comboData._id,
-                  comboName: comboData.comboName.productname,
-                  price: Number(combo.comboproductprice),
-                  quantity: combo.comboproductquantity,
-                  selectionGroups: selectionGroups
-                };
-              }
-            });
-            
-            setOrderItems(newOrderItems);
+            initializeExistingOrder(productsData, combosData);
           }
         }
       } catch (error) {
         console.error('Error fetching data:', error);
+        Alert.alert('Error', 'Failed to load menu data');
       } finally {
         setLoading(false);
       }
     };
 
+    const initializeExistingOrder = (productsData, combosData) => {
+      const parsedOrder = JSON.parse(existingOrder);
+      const newOrderItems = {};
+      
+      // Process regular items
+      parsedOrder.items.forEach(item => {
+        const product = productsData.find(p => p.productname === item.orderproductname);
+        if (product) {
+          newOrderItems[product._id] = item.orderproductquantity;
+        }
+      });
+      
+      // Process combo items with grouping
+      parsedOrder.comboItems.forEach(combo => {
+        const comboData = combosData.find(c => 
+          c.comboName.productname === combo.comboproductitem
+        );
+        if (comboData) {
+          const comboKey = `combo_${comboData._id}`;
+          const selectionGroups = groupComboSelections(combo, comboData);
+          
+          newOrderItems[comboKey] = {
+            comboId: comboData._id,
+            comboName: comboData.comboName.productname,
+            price: Number(combo.comboproductprice),
+            quantity: combo.comboproductquantity,
+            selectionGroups: selectionGroups
+          };
+        }
+      });
+      
+      setOrderItems(newOrderItems);
+    };
+
+    const groupComboSelections = (combo, comboData) => {
+      const selectionGroups = [];
+      const itemsPerGroup = comboData.chooseNumber;
+      const totalItems = combo.combochooseitems.length;
+      
+      // Group selections by quantity
+      for (let i = 0; i < totalItems; i += itemsPerGroup) {
+        selectionGroups.push(
+          combo.combochooseitems.slice(i, i + itemsPerGroup)
+        );
+      }
+      
+      return selectionGroups;
+    };
+
     fetchData();
   }, [existingOrder]);
 
+  // Filter products by selected subcategory
   const filteredProducts = selectedSubCategory 
     ? products.filter(product => 
         product?.productsub?._id === selectedSubCategory._id
       )
     : [];
 
+  // Handle regular product quantity changes
   const handleQuantityChange = (productId, change) => {
     setOrderItems(prev => {
       const currentQuantity = prev[productId] || 0;
@@ -117,6 +135,7 @@ export default function Order() {
     });
   };
 
+  // Handle combo selection
   const handleComboPress = (combo) => {
     setSelectedCombo(combo);
     setCurrentComboAction('new');
@@ -124,9 +143,12 @@ export default function Order() {
     setShowComboModal(true);
   };
 
+  // Update combo quantity with proper grouping
   const updateComboQuantity = (comboKey, change) => {
     setOrderItems(prev => {
       const currentItem = prev[comboKey];
+      
+      // If combo doesn't exist, show modal for new selection
       if (!currentItem) {
         const combo = combos.find(c => `combo_${c._id}` === comboKey);
         if (combo) {
@@ -138,6 +160,7 @@ export default function Order() {
         return prev;
       }
 
+      // Handle quantity increase
       if (change > 0) {
         const combo = combos.find(c => c._id === currentItem.comboId);
         if (combo) {
@@ -147,15 +170,19 @@ export default function Order() {
           setShowComboModal(true);
         }
         return prev;
-      } else {
+      } 
+      // Handle quantity decrease
+      else {
         const newQuantity = currentItem.quantity + change;
         
+        // Remove if quantity reaches zero
         if (newQuantity <= 0) {
           const newItems = {...prev};
           delete newItems[comboKey];
           return newItems;
         }
         
+        // Keep only the first N selection groups
         return {
           ...prev,
           [comboKey]: {
@@ -168,6 +195,7 @@ export default function Order() {
     });
   };
 
+  // Finalize combo selection
   const handleComboItemSelect = (comboId, selections) => {
     const combo = combos.find(c => c._id === comboId);
     if (!combo) return;
@@ -184,6 +212,7 @@ export default function Order() {
         selectionGroups: []
       };
 
+      // Add new selection group
       if (currentComboAction === 'add') {
         return {
           ...prev,
@@ -196,7 +225,9 @@ export default function Order() {
             ]
           }
         };
-      } else {
+      } 
+      // Create new combo with initial selection
+      else {
         return {
           ...prev,
           [comboKey]: {
@@ -209,12 +240,14 @@ export default function Order() {
     });
   };
 
+  // Check if order has items
   const hasOrderItems = Object.values(orderItems).some(item => {
     if (typeof item === 'number') return item > 0;
     if (typeof item === 'object') return item.quantity > 0;
     return false;
   });
 
+  // Submit order to server
   const handleOrder = async () => {
     if (!hasOrderItems) {
       Alert.alert('Empty Order', 'Please add items to your order before proceeding.');
@@ -222,55 +255,8 @@ export default function Order() {
     }
 
     try {
-      const orderData = {
-        table: tableId,
-        orderitems: [],
-        ordercomboitem: []
-      };
-
-      Object.entries(orderItems).forEach(([key, value]) => {
-        if (!key.startsWith('combo_')) {
-          const product = products.find(p => p._id === key);
-          if (product && value > 0) {
-            orderData.orderitems.push({
-              orderproductname: product.productname,
-              orderproductquantity: value,
-              orderproductprice: Number(product.productprice)
-            });
-          }
-        } else {
-          if (value.quantity > 0) {
-            // 合并所有选择组的选项
-            const allSelections = value.selectionGroups.flat();
-            const selectionMap = {};
-            
-            allSelections.forEach(selection => {
-              if (!selectionMap[selection.name]) {
-                selectionMap[selection.name] = 0;
-              }
-              selectionMap[selection.name] += selection.quantity;
-            });
-
-            const combochooseitems = Object.entries(selectionMap).map(([name, qty]) => ({
-              combochooseitemname: name,
-              combochooseitemquantity: qty
-            }));
-
-            orderData.ordercomboitem.push({
-              comboproductitem: value.comboName,
-              comboproductquantity: value.quantity,
-              comboproductprice: value.price,
-              combochooseitems: combochooseitems
-            });
-          }
-        }
-      });
-
-      const endpoint = existingOrder 
-        ? `http://192.168.212.66:3000/api/order/update-order/${JSON.parse(existingOrder).ordernumber}`
-        : 'http://192.168.212.66:3000/api/order/create-order';
-
-      const method = existingOrder ? 'PUT' : 'POST';
+      const orderData = prepareOrderData();
+      const { endpoint, method } = getOrderEndpoint();
 
       const response = await fetch(endpoint, {
         method,
@@ -283,22 +269,7 @@ export default function Order() {
       const result = await response.json();
 
       if (response.ok) {
-        const ordernumber = existingOrder ? JSON.parse(existingOrder).ordernumber : result.ordernumber;
-        
-        router.replace({
-          pathname: '/(tab)/Bill',
-          params: {
-            tableName,
-            tableId,
-            orderDetails: JSON.stringify({
-              ordernumber,
-              items: orderData.orderitems,
-              comboItems: orderData.ordercomboitem,
-              createdAt: new Date().toISOString(),
-              taxRate: result.servicetax || 8
-            })
-          }
-        });
+        navigateToBillScreen(result);
       } else {
         Alert.alert('Error', result.message || 'Failed to process order');
       }
@@ -308,110 +279,137 @@ export default function Order() {
     }
   };
 
+  const prepareOrderData = () => {
+    const orderData = {
+      table: tableId,
+      orderitems: [],
+      ordercomboitem: []
+    };
+
+    Object.entries(orderItems).forEach(([key, value]) => {
+      if (!key.startsWith('combo_')) {
+        processRegularItem(orderData, key, value);
+      } else {
+        processComboItem(orderData, value);
+      }
+    });
+
+    return orderData;
+  };
+
+  const processRegularItem = (orderData, key, value) => {
+    const product = products.find(p => p._id === key);
+    if (product && value > 0) {
+      orderData.orderitems.push({
+        orderproductname: product.productname,
+        orderproductquantity: value,
+        orderproductprice: Number(product.productprice)
+      });
+    }
+  };
+
+  const processComboItem = (orderData, value) => {
+    if (value.quantity > 0) {
+      // Merge all selection groups
+      const allSelections = value.selectionGroups.flat();
+      const selectionMap = {};
+      
+      allSelections.forEach(selection => {
+        if (!selectionMap[selection.name]) {
+          selectionMap[selection.name] = 0;
+        }
+        selectionMap[selection.name] += selection.quantity;
+      });
+
+      const combochooseitems = Object.entries(selectionMap).map(([name, qty]) => ({
+        combochooseitemname: name,
+        combochooseitemquantity: qty
+      }));
+
+      orderData.ordercomboitem.push({
+        comboproductitem: value.comboName,
+        comboproductquantity: value.quantity,
+        comboproductprice: value.price,
+        combochooseitems: combochooseitems
+      });
+    }
+  };
+
+  const getOrderEndpoint = () => {
+    return existingOrder 
+      ? {
+          endpoint: `http://192.168.212.66:3000/api/order/update-order/${JSON.parse(existingOrder).ordernumber}`,
+          method: 'PUT'
+        }
+      : {
+          endpoint: 'http://192.168.212.66:3000/api/order/create-order',
+          method: 'POST'
+        };
+  };
+
+  const navigateToBillScreen = (result) => {
+    const ordernumber = existingOrder 
+      ? JSON.parse(existingOrder).ordernumber 
+      : result.ordernumber;
+    
+    router.replace({
+      pathname: '/(tab)/Bill',
+      params: {
+        tableName,
+        tableId,
+        orderDetails: JSON.stringify({
+          ordernumber,
+          items: prepareOrderData().orderitems,
+          comboItems: prepareOrderData().ordercomboitem,
+          createdAt: new Date().toISOString(),
+          taxRate: result.servicetax || 8
+        })
+      }
+    });
+  };
+
+  // Render product item with proper combo handling
   const renderProductItem = ({ item }) => {
     const isCombo = item.productcategory === 'Combo';
     const comboData = isCombo ? combos.find(c => c.comboName._id === item._id) : null;
     
     if (isCombo && comboData) {
-      const comboKey = `combo_${comboData._id}`;
-      const comboInOrder = orderItems[comboKey];
-      
-      return (
-        <View className="flex-row p-2.5 border-b border-gray-200 items-center">
-          <Image 
-            source={require('../../../mobile/assets/images/productImage.png')} 
-            className="w-20 h-20 rounded mr-3.5" 
-          />
-          <View className="flex-1">
-            <Text className="text-base font-bold mb-1">{item.productname}</Text>
-            <Text className="text-sm text-gray-600 mb-2.5">
-              RM {item.productprice.toFixed(2)}
-            </Text>
-            
-            {comboInOrder?.selectionGroups?.map((group, groupIndex) => (
-              <View key={groupIndex} className="mb-2">
-                <Text className="text-xs text-gray-500">Set {groupIndex + 1}:</Text>
-                {group.map((selection, idx) => (
-                  <Text key={idx} className="text-xs text-gray-500 ml-2">
-                    • {selection.name} (x{selection.quantity})
-                  </Text>
-                ))}
-              </View>
-            ))}
-            
-            <View className="flex-row items-center">
-              <TouchableOpacity 
-                className="bg-[#006b7e] px-2 py-2 rounded-l min-w-[30px] items-center"
-                onPress={() => updateComboQuantity(comboKey, -1)}
-              >
-                <Text className="text-white text-base font-bold">-</Text>
-              </TouchableOpacity>
-              <Text className="text-base w-[30px] text-center bg-gray-100 py-2">
-                {comboInOrder?.quantity || 0}
-              </Text>
-              <TouchableOpacity 
-                className="bg-[#006b7e] px-2 py-2 rounded-r min-w-[30px] items-center"
-                onPress={() => updateComboQuantity(comboKey, 1)}
-              >
-                <Text className="text-white text-base font-bold">+</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      );
+      return <ComboItem 
+        item={item} 
+        comboData={comboData} 
+        orderItems={orderItems} 
+        updateComboQuantity={updateComboQuantity} 
+      />;
     }
     
-    return (
-      <View className="flex-row p-2.5 border-b border-gray-200 items-center">
-        <Image 
-          source={require('../../../mobile/assets/images/productImage.png')} 
-          className="w-20 h-20 rounded mr-3.5" 
-        />
-        <View className="flex-1">
-          <Text className="text-base font-bold mb-1">{item.productname}</Text>
-          <Text className="text-sm text-gray-600 mb-2.5">
-            RM {item.productprice.toFixed(2)}
-          </Text>
-          
-          <View className="flex-row items-center">
-            <TouchableOpacity 
-              className="bg-[#006b7e] px-2 py-2 rounded-l min-w-[30px] items-center"
-              onPress={() => handleQuantityChange(item._id, -1)}
-            >
-              <Text className="text-white text-base font-bold">-</Text>
-            </TouchableOpacity>
-            <Text className="text-base w-[30px] text-center bg-gray-100 py-2">
-              {orderItems[item._id] || 0}
-            </Text>
-            <TouchableOpacity 
-              className="bg-[#006b7e] px-2 py-2 rounded-r min-w-[30px] items-center"
-              onPress={() => handleQuantityChange(item._id, 1)}
-            >
-              <Text className="text-white text-base font-bold">+</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    );
+    return <RegularItem 
+      item={item} 
+      orderItems={orderItems} 
+      handleQuantityChange={handleQuantityChange} 
+    />;
   };
 
+  // Loading state
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center">
-        <Text>Loading products...</Text>
+        <Text>Loading menu...</Text>
       </View>
     );
   }
 
   return (
     <View className="flex-1 bg-white">
+      {/* Header */}
       <View className="bg-[#006b7e] p-4">
         <Text className="text-white text-center text-lg font-bold">
           Table: {tableName || 'No table selected'}
         </Text>
       </View>
 
+      {/* Main content */}
       <View className="flex-1 flex-row">
+        {/* Subcategories sidebar */}
         <ScrollView className="w-[30%] bg-gray-100 border-r border-gray-300">
           {subCategories.map(sub => (
             <TouchableOpacity
@@ -426,6 +424,7 @@ export default function Order() {
           ))}
         </ScrollView>
 
+        {/* Products list */}
         <View className="w-[70%]">
           {selectedSubCategory ? (
             <FlatList
@@ -442,6 +441,7 @@ export default function Order() {
         </View>
       </View>
 
+      {/* Order button */}
       <TouchableOpacity
         className={`p-4 items-center ${hasOrderItems ? 'bg-[#006b7e]' : 'bg-gray-400'}`}
         onPress={handleOrder}
@@ -450,92 +450,198 @@ export default function Order() {
         <Text className="text-white text-lg font-bold">Proceed Order</Text>
       </TouchableOpacity>
 
-      <Modal
-        visible={showComboModal}
-        animationType="slide"
-        transparent={false}
-        onRequestClose={() => {
-          setSelectedComboChoices([]);
-          setShowComboModal(false);
-        }}
-      >
-        <View className="flex-1 p-4">
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-xl font-bold">
-              {selectedCombo?.comboName?.productname || 'Combo Options'}
-            </Text>
-            <TouchableOpacity onPress={() => {
-              setSelectedComboChoices([]);
-              setShowComboModal(false);
-            }}>
-              <Text className="text-lg text-[#006b7e]">Close</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <Text className="mb-4">
-            Select {selectedCombo?.chooseNumber} of {selectedCombo?.option} options:
-            {selectedComboChoices.length > 0 && (
-              <Text className="text-green-600"> ({selectedComboChoices.length} selected)</Text>
-            )}
-          </Text>
-          
-          {selectedCombo?.productDetails?.map((detail, index) => {
-            const isSelected = selectedComboChoices.some(
-              choice => choice.name === detail.productname
-            );
-            
-            return (
-              <TouchableOpacity
-                key={index}
-                className={`p-3 mb-2 border rounded ${
-                  isSelected ? 'bg-blue-100 border-blue-500' : 'bg-white border-gray-300'
-                }`}
-                onPress={() => {
-                  if (isSelected) {
-                    setSelectedComboChoices(prev =>
-                      prev.filter(choice => choice.name !== detail.productname)
-                    );
-                  } else {
-                    if (selectedComboChoices.length < selectedCombo.chooseNumber) {
-                      setSelectedComboChoices(prev => [
-                        ...prev,
-                        { 
-                          name: detail.productname, 
-                          quantity: detail.comboquantity 
-                        }
-                      ]);
-                    } else {
-                      Alert.alert(
-                        "Maximum selections reached",
-                        `You can only choose ${selectedCombo.chooseNumber} options.`
-                      );
-                    }
-                  }
-                }}
-              >
-                <Text className="text-base font-bold">{detail.productname}</Text>
-                <Text className="text-sm text-gray-600">Quantity: {detail.comboquantity}</Text>
-              </TouchableOpacity>
-            );
-          })}
-          
-          {selectedComboChoices.length === selectedCombo?.chooseNumber && (
-            <TouchableOpacity
-              className="mt-4 p-3 bg-[#006b7e] rounded items-center"
-              onPress={() => {
-                handleComboItemSelect(
-                  selectedCombo._id,
-                  selectedComboChoices
-                );
-                setSelectedComboChoices([]);
-                setShowComboModal(false);
-              }}
-            >
-              <Text className="text-white font-bold">Confirm Selection</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </Modal>
+      {/* Combo selection modal */}
+      <ComboSelectionModal
+        showComboModal={showComboModal}
+        selectedCombo={selectedCombo}
+        selectedComboChoices={selectedComboChoices}
+        setSelectedComboChoices={setSelectedComboChoices}
+        setShowComboModal={setShowComboModal}
+        handleComboItemSelect={handleComboItemSelect}
+      />
     </View>
   );
 }
+
+// Component for regular menu item
+const RegularItem = ({ item, orderItems, handleQuantityChange }) => (
+  <View className="flex-row p-2.5 border-b border-gray-200 items-center">
+    <Image 
+      source={require('../../../mobile/assets/images/productImage.png')} 
+      className="w-20 h-20 rounded mr-3.5" 
+    />
+    <View className="flex-1">
+      <Text className="text-base font-bold mb-1">{item.productname}</Text>
+      <Text className="text-sm text-gray-600 mb-2.5">
+        RM {item.productprice.toFixed(2)}
+      </Text>
+      
+      <View className="flex-row items-center">
+        <TouchableOpacity 
+          className="bg-[#006b7e] px-2 py-2 rounded-l min-w-[30px] items-center"
+          onPress={() => handleQuantityChange(item._id, -1)}
+        >
+          <Text className="text-white text-base font-bold">-</Text>
+        </TouchableOpacity>
+        <Text className="text-base w-[30px] text-center bg-gray-100 py-2">
+          {orderItems[item._id] || 0}
+        </Text>
+        <TouchableOpacity 
+          className="bg-[#006b7e] px-2 py-2 rounded-r min-w-[30px] items-center"
+          onPress={() => handleQuantityChange(item._id, 1)}
+        >
+          <Text className="text-white text-base font-bold">+</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+);
+
+// Component for combo menu item
+const ComboItem = ({ item, comboData, orderItems, updateComboQuantity }) => {
+  const comboKey = `combo_${comboData._id}`;
+  const comboInOrder = orderItems[comboKey];
+  
+  return (
+    <View className="flex-row p-2.5 border-b border-gray-200 items-center">
+      <Image 
+        source={require('../../../mobile/assets/images/productImage.png')} 
+        className="w-20 h-20 rounded mr-3.5" 
+      />
+      <View className="flex-1">
+        <Text className="text-base font-bold mb-1">{item.productname}</Text>
+        <Text className="text-sm text-gray-600 mb-2.5">
+          RM {item.productprice.toFixed(2)}
+        </Text>
+        
+        {/* Display selection groups */}
+        {comboInOrder?.selectionGroups?.map((group, groupIndex) => (
+          <View key={groupIndex} className="mb-2">
+            <Text className="text-xs text-gray-500">Set {groupIndex + 1}:</Text>
+            {group.map((selection, idx) => (
+              <Text key={idx} className="text-xs text-gray-500 ml-2">
+                • {selection.name} (x{selection.quantity})
+              </Text>
+            ))}
+          </View>
+        ))}
+        
+        {/* Quantity controls */}
+        <View className="flex-row items-center">
+          <TouchableOpacity 
+            className="bg-[#006b7e] px-2 py-2 rounded-l min-w-[30px] items-center"
+            onPress={() => updateComboQuantity(comboKey, -1)}
+          >
+            <Text className="text-white text-base font-bold">-</Text>
+          </TouchableOpacity>
+          <Text className="text-base w-[30px] text-center bg-gray-100 py-2">
+            {comboInOrder?.quantity || 0}
+          </Text>
+          <TouchableOpacity 
+            className="bg-[#006b7e] px-2 py-2 rounded-r min-w-[30px] items-center"
+            onPress={() => updateComboQuantity(comboKey, 1)}
+          >
+            <Text className="text-white text-base font-bold">+</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+};
+
+// Component for combo selection modal
+const ComboSelectionModal = ({
+  showComboModal,
+  selectedCombo,
+  selectedComboChoices,
+  setSelectedComboChoices,
+  setShowComboModal,
+  handleComboItemSelect
+}) => (
+  <Modal
+    visible={showComboModal}
+    animationType="slide"
+    transparent={false}
+    onRequestClose={() => {
+      setSelectedComboChoices([]);
+      setShowComboModal(false);
+    }}
+  >
+    <View className="flex-1 p-4">
+      <View className="flex-row justify-between items-center mb-4">
+        <Text className="text-xl font-bold">
+          {selectedCombo?.comboName?.productname || 'Combo Options'}
+        </Text>
+        <TouchableOpacity onPress={() => {
+          setSelectedComboChoices([]);
+          setShowComboModal(false);
+        }}>
+          <Text className="text-lg text-[#006b7e]">Close</Text>
+        </TouchableOpacity>
+      </View>
+      
+      <Text className="mb-4">
+        Select {selectedCombo?.chooseNumber} of {selectedCombo?.option} options:
+        {selectedComboChoices.length > 0 && (
+          <Text className="text-green-600"> ({selectedComboChoices.length} selected)</Text>
+        )}
+      </Text>
+      
+      {selectedCombo?.productDetails?.map((detail, index) => {
+        const isSelected = selectedComboChoices.some(
+          choice => choice.name === detail.productname
+        );
+        
+        return (
+          <TouchableOpacity
+            key={index}
+            className={`p-3 mb-2 border rounded ${
+              isSelected ? 'bg-blue-100 border-blue-500' : 'bg-white border-gray-300'
+            }`}
+            onPress={() => {
+              if (isSelected) {
+                setSelectedComboChoices(prev =>
+                  prev.filter(choice => choice.name !== detail.productname)
+                );
+              } else {
+                if (selectedComboChoices.length < selectedCombo.chooseNumber) {
+                  setSelectedComboChoices(prev => [
+                    ...prev,
+                    { 
+                      name: detail.productname, 
+                      quantity: detail.comboquantity 
+                    }
+                  ]);
+                } else {
+                  Alert.alert(
+                    "Maximum selections reached",
+                    `You can only choose ${selectedCombo.chooseNumber} options.`
+                  );
+                }
+              }
+            }}
+          >
+            <Text className="text-base font-bold">{detail.productname}</Text>
+            <Text className="text-sm text-gray-600">Quantity: {detail.comboquantity}</Text>
+          </TouchableOpacity>
+        );
+      })}
+      
+      {selectedComboChoices.length === selectedCombo?.chooseNumber && (
+        <TouchableOpacity
+          className="mt-4 p-3 bg-[#006b7e] rounded items-center"
+          onPress={() => {
+            handleComboItemSelect(
+              selectedCombo._id,
+              selectedComboChoices
+            );
+            setSelectedComboChoices([]);
+            setShowComboModal(false);
+          }}
+        >
+          <Text className="text-white font-bold">Confirm Selection</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  </Modal>
+);
