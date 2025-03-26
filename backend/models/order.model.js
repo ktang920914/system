@@ -40,8 +40,12 @@ const orderSchema = new mongoose.Schema({
     },
     ordertotal: {
         type: Number,
+        default: 0,
+    },
+    tax:{
+        type:Number,
         default: 0
-    }
+    },
 }, { timestamps: true });
 
 const Order = mongoose.model('Order', orderSchema);
