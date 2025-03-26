@@ -14,8 +14,8 @@ export default function Order() {
   const [loading, setLoading] = useState(true);
   const [combos, setCombos] = useState([]);
   const [selectedCombo, setSelectedCombo] = useState(null);
-  const [comboSelections, setComboSelections] = useState({});
   const [showComboModal, setShowComboModal] = useState(false);
+  const [currentComboAction, setCurrentComboAction] = useState(null); // 'add' or 'new'
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,12 +44,10 @@ export default function Order() {
           });
           setSubCategories(Object.values(uniqueSubs));
           
-          // 如果有现有订单，初始化订单项
           if (existingOrder) {
             const parsedOrder = JSON.parse(existingOrder);
             const newOrderItems = {};
             
-            // 处理普通商品
             parsedOrder.items.forEach(item => {
               const product = productsData.find(p => p.productname === item.orderproductname);
               if (product) {
@@ -57,31 +55,23 @@ export default function Order() {
               }
             });
             
-            // 处理组合商品
             parsedOrder.comboItems.forEach(combo => {
               const comboData = combosData.find(c => 
                 c.comboName.productname === combo.comboproductitem
               );
               if (comboData) {
                 const comboKey = `combo_${comboData._id}`;
-                const selections = {};
-                
-                combo.combochooseitems.forEach(item => {
-                  selections[item.combochooseitemname] = item.combochooseitemquantity;
-                });
                 
                 newOrderItems[comboKey] = {
                   comboId: comboData._id,
                   comboName: comboData.comboName.productname,
                   price: Number(combo.comboproductprice),
                   quantity: combo.comboproductquantity,
-                  selections: selections
+                  selections: combo.combochooseitems.map(item => ({
+                    name: item.combochooseitemname,
+                    quantity: item.combochooseitemquantity
+                  }))
                 };
-                
-                setComboSelections(prev => ({
-                  ...prev,
-                  [comboData._id]: selections
-                }));
               }
             });
             
@@ -120,102 +110,95 @@ export default function Order() {
 
   const handleComboPress = (combo) => {
     setSelectedCombo(combo);
+    setCurrentComboAction('new');
     setShowComboModal(true);
-    
-    setOrderItems(prev => ({
-      ...prev,
-      [`combo_${combo._id}`]: {
-        ...prev[`combo_${combo._id}`],
-        comboId: combo._id,
-        comboName: combo.comboName.productname,
-        price: Number(combo.comboName.productprice),
-        quantity: prev[`combo_${combo._id}`]?.quantity || 1,
-        selections: prev[`combo_${combo._id}`]?.selections || {}
-      }
-    }));
   };
 
-  const handleComboItemSelect = (comboId, productName, quantity) => {
-    setComboSelections(prev => {
-      const currentSelections = prev[comboId] || {};
-      
-      if (currentSelections[productName]) {
-        const newSelections = {...currentSelections};
-        delete newSelections[productName];
-        return {
-          ...prev,
-          [comboId]: newSelections
-        };
+  const updateComboQuantity = (comboKey, change) => {
+    setOrderItems(prev => {
+      const currentItem = prev[comboKey];
+      if (!currentItem) {
+        // If no existing combo, show modal to select first item
+        const combo = combos.find(c => `combo_${c._id}` === comboKey);
+        if (combo) {
+          setSelectedCombo(combo);
+          setCurrentComboAction('new');
+          setShowComboModal(true);
+        }
+        return prev;
+      }
+
+      if (change > 0) {
+        // When increasing quantity, show modal to select new items
+        const combo = combos.find(c => c._id === currentItem.comboId);
+        if (combo) {
+          setSelectedCombo(combo);
+          setCurrentComboAction('add');
+          setShowComboModal(true);
+        }
+        return prev;
       } else {
-        const combo = combos.find(c => c._id === comboId);
-        if (combo && Object.keys(currentSelections).length >= combo.chooseNumber) {
-          Alert.alert(
-            'Selection Limit',
-            `You can only select ${combo.chooseNumber} items for this combo.`
-          );
-          return prev;
+        const newQuantity = currentItem.quantity + change;
+        
+        if (newQuantity <= 0) {
+          const newItems = {...prev};
+          delete newItems[comboKey];
+          return newItems;
         }
         
+        // When decreasing quantity, remove the last selection
         return {
           ...prev,
-          [comboId]: {
-            ...currentSelections,
-            [productName]: quantity
+          [comboKey]: {
+            ...currentItem,
+            quantity: newQuantity,
+            selections: currentItem.selections.slice(0, newQuantity)
           }
         };
       }
     });
   };
 
-  const confirmComboSelection = () => {
-    if (!selectedCombo) return;
-    
-    const currentSelections = comboSelections[selectedCombo._id] || {};
-    const selectedCount = Object.keys(currentSelections).length;
-    
-    if (selectedCount < selectedCombo.chooseNumber) {
-      Alert.alert(
-        'Incomplete Selection',
-        `Please select ${selectedCombo.chooseNumber} items for this combo.`
-      );
-      return;
-    }
-    
-    setOrderItems(prev => ({
-      ...prev,
-      [`combo_${selectedCombo._id}`]: {
-        ...prev[`combo_${selectedCombo._id}`],
-        selections: currentSelections,
-        price: Number(selectedCombo.comboName.productprice)
-      }
-    }));
-    
-    setShowComboModal(false);
-  };
+  const handleComboItemSelect = (comboId, productName, quantity) => {
+    const combo = combos.find(c => c._id === comboId);
+    if (!combo) return;
 
-  const updateComboQuantity = (comboKey, change) => {
+    setShowComboModal(false);
+    
     setOrderItems(prev => {
+      const comboKey = `combo_${comboId}`;
       const currentItem = prev[comboKey] || {
+        comboId,
+        comboName: combo.comboName.productname,
+        price: Number(combo.comboName.productprice),
         quantity: 0,
-        price: 0,
-        selections: {}
+        selections: []
       };
-      
-      const newQuantity = (currentItem.quantity || 0) + change;
-      
-      if (newQuantity <= 0) {
-        const newItems = {...prev};
-        delete newItems[comboKey];
-        return newItems;
+
+      if (currentComboAction === 'add') {
+        // Add to existing selections and increase quantity
+        return {
+          ...prev,
+          [comboKey]: {
+            ...currentItem,
+            quantity: currentItem.quantity + 1,
+            selections: [
+              ...currentItem.selections,
+              { name: productName, quantity }
+            ]
+          }
+        };
+      } else {
+        // Create new combo item
+        return {
+          ...prev,
+          [comboKey]: {
+            ...currentItem,
+            quantity: 1,
+            selections: [{ name: productName, quantity }]
+          }
+        };
       }
-      
-      return {
-        ...prev,
-        [comboKey]: {
-          ...currentItem,
-          quantity: newQuantity
-        }
-      };
     });
   };
 
@@ -249,21 +232,25 @@ export default function Order() {
             });
           }
         } else {
-          const combo = combos.find(c => c._id === value.comboId);
-          if (combo && value.quantity > 0) {
-            const combochooseitems = Object.entries(value.selections).map(([name, qty]) => ({
+          if (value.quantity > 0) {
+            // Group selections by item name and sum quantities
+            const selectionMap = {};
+            value.selections.forEach(selection => {
+              if (!selectionMap[selection.name]) {
+                selectionMap[selection.name] = 0;
+              }
+              selectionMap[selection.name] += selection.quantity;
+            });
+
+            const combochooseitems = Object.entries(selectionMap).map(([name, qty]) => ({
               combochooseitemname: name,
               combochooseitemquantity: qty
             }));
 
-            const comboPrice = Number(value.price) || 
-                             Number(combo.comboName.productprice) || 
-                             0;
-
             orderData.ordercomboitem.push({
               comboproductitem: value.comboName,
               comboproductquantity: value.quantity,
-              comboproductprice: comboPrice,
+              comboproductprice: value.price,
               combochooseitems: combochooseitems
             });
           }
@@ -332,42 +319,33 @@ export default function Order() {
               RM {item.productprice.toFixed(2)}
             </Text>
             
-            {comboInOrder?.selections && (
+            {comboInOrder?.selections?.length > 0 && (
               <View className="mb-2">
-                {Object.entries(comboInOrder.selections).map(([name, qty], idx) => (
+                {comboInOrder.selections.map((selection, idx) => (
                   <Text key={idx} className="text-xs text-gray-500">
-                    • {name} (x{qty})
+                    • {selection.name} (x{selection.quantity})
                   </Text>
                 ))}
               </View>
             )}
             
-            {comboInOrder ? (
-              <View className="flex-row items-center">
-                <TouchableOpacity 
-                  className="bg-[#006b7e] px-2 py-2 rounded-l min-w-[30px] items-center"
-                  onPress={() => updateComboQuantity(comboKey, -1)}
-                >
-                  <Text className="text-white text-base font-bold">-</Text>
-                </TouchableOpacity>
-                <Text className="text-base w-[30px] text-center bg-gray-100 py-2">
-                  {comboInOrder.quantity}
-                </Text>
-                <TouchableOpacity 
-                  className="bg-[#006b7e] px-2 py-2 rounded-r min-w-[30px] items-center"
-                  onPress={() => updateComboQuantity(comboKey, 1)}
-                >
-                  <Text className="text-white text-base font-bold">+</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity
-                className="bg-[#006b7e] px-4 py-2 rounded items-center"
-                onPress={() => handleComboPress(comboData)}
+            <View className="flex-row items-center">
+              <TouchableOpacity 
+                className="bg-[#006b7e] px-2 py-2 rounded-l min-w-[30px] items-center"
+                onPress={() => updateComboQuantity(comboKey, -1)}
               >
-                <Text className="text-white text-base font-bold">Select Options</Text>
+                <Text className="text-white text-base font-bold">-</Text>
               </TouchableOpacity>
-            )}
+              <Text className="text-base w-[30px] text-center bg-gray-100 py-2">
+                {comboInOrder?.quantity || 0}
+              </Text>
+              <TouchableOpacity 
+                className="bg-[#006b7e] px-2 py-2 rounded-r min-w-[30px] items-center"
+                onPress={() => updateComboQuantity(comboKey, 1)}
+              >
+                <Text className="text-white text-base font-bold">+</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       );
@@ -479,44 +457,23 @@ export default function Order() {
           </View>
           
           <Text className="mb-4">
-            Select {selectedCombo?.chooseNumber} of {selectedCombo?.option} options:
+            Select 1 of {selectedCombo?.option} options:
           </Text>
           
-          {selectedCombo?.productDetails?.map((detail, index) => {
-            const isSelected = comboSelections[selectedCombo._id]?.[detail.productname];
-            return (
-              <TouchableOpacity
-                key={index}
-                className={`p-3 mb-2 border rounded ${
-                  isSelected ? 'bg-blue-100 border-blue-500' : 'bg-white border-gray-300'
-                }`}
-                onPress={() => handleComboItemSelect(
-                  selectedCombo._id, 
-                  detail.productname, 
-                  detail.comboquantity
-                )}
-              >
-                <Text className="text-base font-bold">{detail.productname}</Text>
-                <Text className="text-sm text-gray-600">Quantity: {detail.comboquantity}</Text>
-                {isSelected && (
-                  <Text className="text-sm text-green-600 mt-1">Selected</Text>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-          
-          <View className="mt-4">
-            <Text className="mb-2">
-              Selected: {Object.keys(comboSelections[selectedCombo?._id] || {}).length} / {selectedCombo?.chooseNumber}
-            </Text>
-            
+          {selectedCombo?.productDetails?.map((detail, index) => (
             <TouchableOpacity
-              className="bg-[#006b7e] p-3 rounded items-center"
-              onPress={confirmComboSelection}
+              key={index}
+              className="p-3 mb-2 border rounded bg-white border-gray-300"
+              onPress={() => handleComboItemSelect(
+                selectedCombo._id, 
+                detail.productname, 
+                detail.comboquantity
+              )}
             >
-              <Text className="text-white text-base font-bold">Confirm Selection</Text>
+              <Text className="text-base font-bold">{detail.productname}</Text>
+              <Text className="text-sm text-gray-600">Quantity: {detail.comboquantity}</Text>
             </TouchableOpacity>
-          </View>
+          ))}
         </View>
       </Modal>
     </View>
