@@ -26,24 +26,14 @@ const orderSchema = new mongoose.Schema({
         },
     }],
     ordercomboitem: [{
-        comboproductitem: {
-            type: String,
-        },
-        comboproductquantity: {
-            type: Number,
-        },
-        comboproductprice: {
-            type: Number,
-        },
+        comboproductitem: String,
+        comboproductquantity: { type: Number, default: 1 },
+        comboproductprice: { type: Number, required: true, min: 0 },
         combochooseitems: [{
-            combochooseitemname: {
-                type: String,
-            },
-            combochooseitemquantity: {
-                type: Number,
-            },
-        }],
-    }],
+          combochooseitemname: String,
+          combochooseitemquantity: { type: Number, default: 1 }
+        }]
+      }],
     servicetax: {
         type: Number,
         default: 8,

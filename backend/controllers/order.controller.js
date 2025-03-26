@@ -10,16 +10,46 @@ export const createOrder = async (req, res, next) => {
         const randomPart = Math.floor(1000 + Math.random() * 9000);
         const ordernumber = `ORD-${datePart}-${randomPart}`;
         
+        // Validate and convert numeric fields
+        const validatedOrderItems = orderitems.map(item => ({
+            ...item,
+            orderproductquantity: Number(item.orderproductquantity),
+            orderproductprice: Number(item.orderproductprice)
+        }));
+
+        const validatedComboItems = ordercomboitem.map(combo => ({
+            ...combo,
+            comboproductquantity: Number(combo.comboproductquantity),
+            comboproductprice: Number(combo.comboproductprice),
+            combochooseitems: combo.combochooseitems.map(chooseItem => ({
+                ...chooseItem,
+                combochooseitemquantity: Number(chooseItem.combochooseitemquantity)
+            }))
+        }));
+
         // Create new order
         const newOrder = new Order({
             table,
             ordernumber,
-            orderitems,
-            ordercomboitem,
+            orderitems: validatedOrderItems,
+            ordercomboitem: validatedComboItems,
             servicetax: 8
         });
         
         await newOrder.save();
+
+        // 额外验证：检查所有价格是否为有效数字
+    const hasInvalidPrices = [
+        ...orderitems.map(i => isNaN(i.orderproductprice)),
+        ...ordercomboitem.map(c => isNaN(c.comboproductprice))
+      ].some(Boolean);
+  
+      if (hasInvalidPrices) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid price values detected'
+        });
+      }
         
         res.status(201).json({
             success: true,

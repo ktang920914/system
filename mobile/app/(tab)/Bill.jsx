@@ -6,12 +6,11 @@ export default function Bill() {
   const params = useLocalSearchParams();
   const { tableName, orderDetails } = params || {};
   
-  // Parse the stringified orderDetails
   const parsedOrderDetails = orderDetails ? JSON.parse(orderDetails) : null;
 
   useEffect(() => {
-    console.log('Received params:', params);
-  }, [params]);
+    console.log('Order details:', parsedOrderDetails);
+  }, [parsedOrderDetails]);
 
   if (!parsedOrderDetails) {
     return (
@@ -24,12 +23,10 @@ export default function Bill() {
   const calculateSubtotal = () => {
     let subtotal = 0;
     
-    // Regular items
     parsedOrderDetails.items.forEach(item => {
       subtotal += item.orderproductprice * item.orderproductquantity;
     });
     
-    // Combo items
     parsedOrderDetails.comboItems.forEach(combo => {
       subtotal += combo.comboproductprice * combo.comboproductquantity;
     });
@@ -56,11 +53,11 @@ export default function Bill() {
         </Text>
       </View>
 
-      {/* Regular Items */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Items:</Text>
+        
         {parsedOrderDetails.items.map((item, index) => (
-          <View key={index} style={styles.itemRow}>
+          <View key={`item-${index}`} style={styles.itemRow}>
             <Text style={styles.itemName}>{item.orderproductname}</Text>
             <View style={styles.itemDetails}>
               <Text style={styles.itemQuantity}>x{item.orderproductquantity}</Text>
@@ -71,21 +68,27 @@ export default function Bill() {
           </View>
         ))}
 
-        {/* Combo Items */}
         {parsedOrderDetails.comboItems.map((combo, index) => (
-          <View key={`combo-${index}`} style={styles.itemRow}>
-            <Text style={styles.itemName}>{combo.comboproductitem} (Combo)</Text>
-            <View style={styles.itemDetails}>
-              <Text style={styles.itemQuantity}>x{combo.comboproductquantity}</Text>
-              <Text style={styles.itemPrice}>
-                RM {(combo.comboproductprice * combo.comboproductquantity).toFixed(2)}
-              </Text>
+          <View key={`combo-${index}`}>
+            <View style={styles.itemRow}>
+              <Text style={styles.itemName}>{combo.comboproductitem} (Combo)</Text>
+              <View style={styles.itemDetails}>
+                <Text style={styles.itemQuantity}>x{combo.comboproductquantity}</Text>
+                <Text style={styles.itemPrice}>
+                  RM {(combo.comboproductprice * combo.comboproductquantity).toFixed(2)}
+                </Text>
+              </View>
             </View>
+            
+            {combo.combochooseitems.map((item, itemIndex) => (
+              <View key={`combo-item-${index}-${itemIndex}`} style={styles.comboItem}>
+                <Text style={styles.comboItemText}>• {item.combochooseitemname} (x{item.combochooseitemquantity})</Text>
+              </View>
+            ))}
           </View>
         ))}
       </View>
 
-      {/* Totals */}
       <View style={styles.totalsSection}>
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Subtotal:</Text>
@@ -163,6 +166,14 @@ const styles = StyleSheet.create({
   itemPrice: {
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  comboItem: {
+    paddingLeft: 20,
+    marginBottom: 4,
+  },
+  comboItemText: {
+    fontSize: 14,
+    color: '#666',
   },
   totalsSection: {
     marginTop: 20,

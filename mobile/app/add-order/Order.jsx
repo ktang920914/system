@@ -22,11 +22,15 @@ export default function Order() {
       try {
         setLoading(true);
         
-        const productsRes = await fetch('http://192.168.212.66:3000/api/product/get-products');
-        const combosRes = await fetch('http://192.168.212.66:3000/api/combo/get-combos');
+        const [productsRes, combosRes] = await Promise.all([
+          fetch('http://192.168.212.66:3000/api/product/get-products'),
+          fetch('http://192.168.212.66:3000/api/combo/get-combos')
+        ]);
         
-        const productsData = await productsRes.json();
-        const combosData = await combosRes.json();
+        const [productsData, combosData] = await Promise.all([
+          productsRes.json(),
+          combosRes.json()
+        ]);
         
         if (productsRes.ok && combosRes.ok) {
           setProducts(productsData);
@@ -34,7 +38,7 @@ export default function Order() {
           
           const uniqueSubs = {};
           productsData.forEach(product => {
-            if (product?.productsub && typeof product.productsub === 'object' && product.productsub !== null && product.productsub._id) {
+            if (product?.productsub) {
               uniqueSubs[product.productsub._id] = product.productsub;
             }
           });
@@ -52,7 +56,7 @@ export default function Order() {
 
   const filteredProducts = selectedSubCategory 
     ? products.filter(product => 
-        product?.productsub && product.productsub._id === selectedSubCategory._id
+        product?.productsub?._id === selectedSubCategory._id
       )
     : [];
 
@@ -74,15 +78,17 @@ export default function Order() {
     setSelectedCombo(combo);
     setShowComboModal(true);
     
-    setComboSelections(prev => {
-      if (!prev[combo._id]) {
-        return {
-          ...prev,
-          [combo._id]: {}
-        };
+    setOrderItems(prev => ({
+      ...prev,
+      [`combo_${combo._id}`]: {
+        ...prev[`combo_${combo._id}`],
+        comboId: combo._id,
+        comboName: combo.comboName.productname,
+        price: Number(combo.comboName.productprice),
+        quantity: prev[`combo_${combo._id}`]?.quantity || 1,
+        selections: prev[`combo_${combo._id}`]?.selections || {}
       }
-      return prev;
-    });
+    }));
   };
 
   const handleComboItemSelect = (comboId, productName, quantity) => {
@@ -134,34 +140,24 @@ export default function Order() {
     setOrderItems(prev => ({
       ...prev,
       [`combo_${selectedCombo._id}`]: {
-        comboId: selectedCombo._id,
-        comboName: selectedCombo.comboName.productname,
+        ...prev[`combo_${selectedCombo._id}`],
         selections: currentSelections,
-        quantity: 1,
-        price: selectedCombo.comboName.productprice
+        price: Number(selectedCombo.comboName.productprice)
       }
     }));
     
     setShowComboModal(false);
   };
 
-  const increaseComboQuantity = (comboKey) => {
+  const updateComboQuantity = (comboKey, change) => {
     setOrderItems(prev => {
-      const currentItem = prev[comboKey];
-      return {
-        ...prev,
-        [comboKey]: {
-          ...currentItem,
-          quantity: (currentItem.quantity || 1) + 1
-        }
+      const currentItem = prev[comboKey] || {
+        quantity: 0,
+        price: 0,
+        selections: {}
       };
-    });
-  };
-
-  const decreaseComboQuantity = (comboKey) => {
-    setOrderItems(prev => {
-      const currentItem = prev[comboKey];
-      const newQuantity = (currentItem.quantity || 1) - 1;
+      
+      const newQuantity = (currentItem.quantity || 0) + change;
       
       if (newQuantity <= 0) {
         const newItems = {...prev};
@@ -181,7 +177,7 @@ export default function Order() {
 
   const hasOrderItems = Object.values(orderItems).some(item => {
     if (typeof item === 'number') return item > 0;
-    if (typeof item === 'object' && item.quantity) return item.quantity > 0;
+    if (typeof item === 'object') return item.quantity > 0;
     return false;
   });
 
@@ -201,42 +197,42 @@ export default function Order() {
       Object.entries(orderItems).forEach(([key, value]) => {
         if (!key.startsWith('combo_')) {
           const product = products.find(p => p._id === key);
-          if (product) {
+          if (product && value > 0) {
             orderData.orderitems.push({
               orderproductname: product.productname,
               orderproductquantity: value,
-              orderproductprice: product.productprice
+              orderproductprice: Number(product.productprice)
             });
           }
         } else {
-          // Find the combo data
           const combo = combos.find(c => c._id === value.comboId);
-          
-          // Create combo choose items array
-          const combochooseitems = [];
-          
-          // Add selected items to combochooseitems
-          Object.entries(value.selections).forEach(([productName, quantity]) => {
-            const productDetail = combo.productDetails.find(
-              detail => detail.productname === productName
-            );
-            
-            if (productDetail) {
-              combochooseitems.push({
-                combochooseitemname: productName,
-                combochooseitemquantity: productDetail.comboquantity
-              });
-            }
-          });
+          if (combo && value.quantity > 0) {
+            const combochooseitems = Object.entries(value.selections).map(([name, qty]) => ({
+              combochooseitemname: name,
+              combochooseitemquantity: qty
+            }));
 
-          orderData.ordercomboitem.push({
-            comboproductitem: value.comboName,
-            comboproductquantity: value.quantity,
-            comboproductprice: value.price,
-            combochooseitems: combochooseitems
-          });
+            const comboPrice = Number(value.price) || 
+                             Number(combo.comboName.productprice) || 
+                             0;
+
+            console.log('Combo price debug:', {
+              valuePrice: value.price,
+              comboPrice: combo.comboName.productprice,
+              finalPrice: comboPrice
+            });
+
+            orderData.ordercomboitem.push({
+              comboproductitem: value.comboName,
+              comboproductquantity: value.quantity,
+              comboproductprice: comboPrice,
+              combochooseitems: combochooseitems
+            });
+          }
         }
       });
+
+      console.log('Submitting order:', orderData);
 
       const response = await fetch('http://192.168.212.66:3000/api/order/create-order', {
         method: 'POST',
@@ -258,7 +254,7 @@ export default function Order() {
               items: orderData.orderitems,
               comboItems: orderData.ordercomboitem,
               createdAt: new Date().toISOString(),
-              taxRate: result.servicetax
+              taxRate: result.servicetax || 8
             })
           }
         });
@@ -286,16 +282,16 @@ export default function Order() {
             className="w-20 h-20 rounded mr-3.5" 
           />
           <View className="flex-1">
-            <Text className="text-base font-bold mb-1">{item?.productname || 'No name'}</Text>
+            <Text className="text-base font-bold mb-1">{item.productname}</Text>
             <Text className="text-sm text-gray-600 mb-2.5">
-              RM {item?.productprice ? item.productprice.toFixed(2) : '0.00'}
+              RM {item.productprice.toFixed(2)}
             </Text>
             
             {comboInOrder?.selections && (
               <View className="mb-2">
-                {Object.entries(comboInOrder.selections).map(([productName, quantity], index) => (
-                  <Text key={index} className="text-xs text-gray-500">
-                    • {productName} (x{quantity})
+                {Object.entries(comboInOrder.selections).map(([name, qty], idx) => (
+                  <Text key={idx} className="text-xs text-gray-500">
+                    • {name} (x{qty})
                   </Text>
                 ))}
               </View>
@@ -305,16 +301,16 @@ export default function Order() {
               <View className="flex-row items-center">
                 <TouchableOpacity 
                   className="bg-[#006b7e] px-2 py-2 rounded-l min-w-[30px] items-center"
-                  onPress={() => decreaseComboQuantity(comboKey)}
+                  onPress={() => updateComboQuantity(comboKey, -1)}
                 >
                   <Text className="text-white text-base font-bold">-</Text>
                 </TouchableOpacity>
                 <Text className="text-base w-[30px] text-center bg-gray-100 py-2">
-                  {comboInOrder.quantity || 1}
+                  {comboInOrder.quantity}
                 </Text>
                 <TouchableOpacity 
                   className="bg-[#006b7e] px-2 py-2 rounded-r min-w-[30px] items-center"
-                  onPress={() => increaseComboQuantity(comboKey)}
+                  onPress={() => updateComboQuantity(comboKey, 1)}
                 >
                   <Text className="text-white text-base font-bold">+</Text>
                 </TouchableOpacity>
@@ -339,9 +335,9 @@ export default function Order() {
           className="w-20 h-20 rounded mr-3.5" 
         />
         <View className="flex-1">
-          <Text className="text-base font-bold mb-1">{item?.productname || 'No name'}</Text>
+          <Text className="text-base font-bold mb-1">{item.productname}</Text>
           <Text className="text-sm text-gray-600 mb-2.5">
-            RM {item?.productprice ? item.productprice.toFixed(2) : '0.00'}
+            RM {item.productprice.toFixed(2)}
           </Text>
           
           <View className="flex-row items-center">
