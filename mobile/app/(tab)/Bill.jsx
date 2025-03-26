@@ -144,7 +144,7 @@ export default function Bill() {
 
   const handleAddMoreItems = () => {
     router.navigate({
-      pathname: '/(tab)/Order',
+      pathname: '/add-order/Order',
       params: {
         tableId,
         tableName,
