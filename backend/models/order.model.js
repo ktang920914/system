@@ -28,7 +28,7 @@ const orderSchema = new mongoose.Schema({
     ordercomboitem: [{
         comboproductitem: String,
         comboproductquantity: { type: Number, default: 1 },
-        comboproductprice: { type: Number, required: true, min: 0 },
+        comboproductprice: { type: Number, required: true },
         combochooseitems: [{
           combochooseitemname: String,
           combochooseitemquantity: { type: Number, default: 1 }
