@@ -6,38 +6,57 @@ export default function Bill() {
   const params = useLocalSearchParams();
   const { tableName, orderDetails, tableId } = params || {};
   
-  const [parsedOrderDetails, setParsedOrderDetails] = useState(
-    orderDetails ? JSON.parse(orderDetails) : null
-  );
+  const [parsedOrderDetails, setParsedOrderDetails] = useState({
+    ordernumber: '',
+    items: [],
+    comboItems: [],
+    taxRate: 8,
+    createdAt: new Date().toISOString()
+  });
 
   useEffect(() => {
     if (orderDetails) {
-      setParsedOrderDetails(JSON.parse(orderDetails));
+      try {
+        const parsed = JSON.parse(orderDetails);
+        setParsedOrderDetails({
+          ordernumber: parsed.ordernumber || '',
+          items: parsed.items || [],
+          comboItems: parsed.comboItems || [],
+          taxRate: parsed.taxRate || 8,
+          createdAt: parsed.createdAt || new Date().toISOString()
+        });
+      } catch (error) {
+        console.error('Error parsing order details:', error);
+      }
     }
   }, [orderDetails]);
 
   const calculateSubtotal = () => {
     let subtotal = 0;
     
-    parsedOrderDetails?.items.forEach(item => {
-      subtotal += item.orderproductprice * item.orderproductquantity;
+    parsedOrderDetails.items?.forEach(item => {
+      subtotal += (item.orderproductprice || 0) * (item.orderproductquantity || 0);
     });
     
-    parsedOrderDetails?.comboItems.forEach(combo => {
-      subtotal += combo.comboproductprice * combo.comboproductquantity;
+    parsedOrderDetails.comboItems?.forEach(combo => {
+      subtotal += (combo.comboproductprice || 0) * (combo.comboproductquantity || 0);
     });
     
     return subtotal;
   };
 
   const subtotal = calculateSubtotal();
-  const taxRate = parsedOrderDetails?.taxRate / 100 || 0.08;
+  const taxRate = (parsedOrderDetails?.taxRate || 8) / 100;
   const taxAmount = subtotal * taxRate;
   const totalAmount = subtotal + taxAmount;
 
   const handleDeleteItem = async (itemName, isCombo = false) => {
     try {
-      // Create updated order data without the deleted item
+      if (!parsedOrderDetails?.ordernumber) {
+        Alert.alert('Error', 'No order found');
+        return;
+      }
+
       const updatedItems = parsedOrderDetails.items.filter(
         item => item.orderproductname !== itemName
       );
@@ -67,7 +86,6 @@ export default function Bill() {
       if (response.ok) {
         Alert.alert('Success', 'Item removed successfully');
         
-        // Update local order data
         setParsedOrderDetails(prev => ({
           ...prev,
           items: updatedItems,
@@ -84,6 +102,8 @@ export default function Bill() {
   };
 
   const handleAddMoreItems = () => {
+    if (!parsedOrderDetails) return;
+    
     router.navigate({
       pathname: '/add-order/Order',
       params: {
@@ -101,8 +121,13 @@ export default function Bill() {
 
   const handlePay = async () => {
     try {
+      if (!parsedOrderDetails?.ordernumber) {
+        Alert.alert('Error', 'No order found');
+        return;
+      }
+
       const subtotal = calculateSubtotal();
-      const taxRate = parsedOrderDetails?.taxRate / 100 || 0.08;
+      const taxRate = (parsedOrderDetails?.taxRate || 8) / 100;
       const taxAmount = subtotal * taxRate;
       const totalAmount = subtotal + taxAmount;
   
@@ -124,7 +149,7 @@ export default function Bill() {
       
       if (response.ok) {
         Alert.alert('Success', 'Payment processed successfully');
-        // 导航到支付完成页面或其他操作
+        // Navigate to payment complete screen or other action
       } else {
         Alert.alert('Error', result.message || 'Payment failed');
       }
@@ -143,18 +168,18 @@ export default function Bill() {
 
       <View className="mb-5">
         <View className="flex-row justify-between items-center mb-3">
-          <Text className="text-lg font-bold">Order #{parsedOrderDetails.ordernumber}</Text>
+          <Text className="text-lg font-bold">Order #{parsedOrderDetails?.ordernumber || ''}</Text>
         </View>
         
         <Text className="text-gray-500 mb-2.5">
-          {new Date(parsedOrderDetails.createdAt).toLocaleString()}
+          {new Date(parsedOrderDetails?.createdAt || new Date()).toLocaleString()}
         </Text>
       </View>
 
       <View className="mb-5">
         <Text className="text-lg font-bold mb-2.5">Items:</Text>
         
-        {parsedOrderDetails.items.map((item, index) => (
+        {parsedOrderDetails?.items?.map((item, index) => (
           <View key={`item-${index}`} className="flex-row justify-between mb-2 pb-2 border-b border-gray-100">
             <View className="flex-1">
               <Text className="text-base">{item.orderproductname}</Text>
@@ -162,7 +187,7 @@ export default function Bill() {
             </View>
             <View className="flex-row items-center">
               <Text className="text-base font-bold mr-4">
-                RM {(item.orderproductprice * item.orderproductquantity).toFixed(2)}
+                RM {((item.orderproductprice || 0) * (item.orderproductquantity || 0)).toFixed(2)}
               </Text>
               <TouchableOpacity 
                 onPress={() => handleDeleteItem(item.orderproductname)}
@@ -174,10 +199,9 @@ export default function Bill() {
           </View>
         ))}
 
-        {parsedOrderDetails.comboItems.map((combo, index) => {
-          // Group combo items by their groupIndex
+        {parsedOrderDetails?.comboItems?.map((combo, index) => {
           const groupedChoices = {};
-          combo.combochooseitems.forEach(item => {
+          combo.combochooseitems?.forEach(item => {
             const groupIndex = item.groupIndex || 0;
             if (!groupedChoices[groupIndex]) {
               groupedChoices[groupIndex] = [];
@@ -194,7 +218,7 @@ export default function Bill() {
                 </View>
                 <View className="flex-row items-center">
                   <Text className="text-base font-bold mr-4">
-                    RM {(combo.comboproductprice * combo.comboproductquantity).toFixed(2)}
+                    RM {((combo.comboproductprice || 0) * (combo.comboproductquantity || 0)).toFixed(2)}
                   </Text>
                   <TouchableOpacity 
                     onPress={() => handleDeleteItem(combo.comboproductitem, true)}
@@ -205,7 +229,6 @@ export default function Bill() {
                 </View>
               </View>
               
-              {/* Display grouped choices */}
               {Object.entries(groupedChoices).map(([groupIndex, items]) => (
                 <View key={`group-${groupIndex}`} className="pl-5 mt-1">
                   <Text className="text-xs text-gray-500">Set {parseInt(groupIndex) + 1}:</Text>
@@ -227,7 +250,7 @@ export default function Bill() {
           <Text className="text-base font-bold">RM {subtotal.toFixed(2)}</Text>
         </View>
         <View className="flex-row justify-between mb-2">
-          <Text className="text-base">Tax ({parsedOrderDetails.taxRate || 8}%):</Text>
+          <Text className="text-base">Tax ({parsedOrderDetails?.taxRate || 8}%):</Text>
           <Text className="text-base font-bold">RM {taxAmount.toFixed(2)}</Text>
         </View>
         <View className="flex-row justify-between mb-2 mt-2.5 pt-2.5 border-t border-gray-200">
