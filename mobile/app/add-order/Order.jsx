@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 
 export default function Order() {
   const route = useRoute();
-  const { tableId, tableName } = route.params || {};
+  const { tableId, tableName, existingOrder } = route.params || {};
   
   const [products, setProducts] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
@@ -43,6 +43,50 @@ export default function Order() {
             }
           });
           setSubCategories(Object.values(uniqueSubs));
+          
+          // 如果有现有订单，初始化订单项
+          if (existingOrder) {
+            const parsedOrder = JSON.parse(existingOrder);
+            const newOrderItems = {};
+            
+            // 处理普通商品
+            parsedOrder.items.forEach(item => {
+              const product = productsData.find(p => p.productname === item.orderproductname);
+              if (product) {
+                newOrderItems[product._id] = item.orderproductquantity;
+              }
+            });
+            
+            // 处理组合商品
+            parsedOrder.comboItems.forEach(combo => {
+              const comboData = combosData.find(c => 
+                c.comboName.productname === combo.comboproductitem
+              );
+              if (comboData) {
+                const comboKey = `combo_${comboData._id}`;
+                const selections = {};
+                
+                combo.combochooseitems.forEach(item => {
+                  selections[item.combochooseitemname] = item.combochooseitemquantity;
+                });
+                
+                newOrderItems[comboKey] = {
+                  comboId: comboData._id,
+                  comboName: comboData.comboName.productname,
+                  price: Number(combo.comboproductprice),
+                  quantity: combo.comboproductquantity,
+                  selections: selections
+                };
+                
+                setComboSelections(prev => ({
+                  ...prev,
+                  [comboData._id]: selections
+                }));
+              }
+            });
+            
+            setOrderItems(newOrderItems);
+          }
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -52,7 +96,7 @@ export default function Order() {
     };
 
     fetchData();
-  }, []);
+  }, [existingOrder]);
 
   const filteredProducts = selectedSubCategory 
     ? products.filter(product => 
@@ -216,12 +260,6 @@ export default function Order() {
                              Number(combo.comboName.productprice) || 
                              0;
 
-            console.log('Combo price debug:', {
-              valuePrice: value.price,
-              comboPrice: combo.comboName.productprice,
-              finalPrice: comboPrice
-            });
-
             orderData.ordercomboitem.push({
               comboproductitem: value.comboName,
               comboproductquantity: value.quantity,
@@ -232,10 +270,14 @@ export default function Order() {
         }
       });
 
-      console.log('Submitting order:', orderData);
+      const endpoint = existingOrder 
+        ? `http://192.168.212.66:3000/api/order/update-order/${JSON.parse(existingOrder).ordernumber}`
+        : 'http://192.168.212.66:3000/api/order/create-order';
 
-      const response = await fetch('http://192.168.212.66:3000/api/order/create-order', {
-        method: 'POST',
+      const method = existingOrder ? 'PUT' : 'POST';
+
+      const response = await fetch(endpoint, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -245,12 +287,15 @@ export default function Order() {
       const result = await response.json();
 
       if (response.ok) {
+        const ordernumber = existingOrder ? JSON.parse(existingOrder).ordernumber : result.ordernumber;
+        
         router.replace({
           pathname: '/(tab)/Bill',
           params: {
             tableName,
+            tableId,
             orderDetails: JSON.stringify({
-              ordernumber: result.ordernumber,
+              ordernumber,
               items: orderData.orderitems,
               comboItems: orderData.ordercomboitem,
               createdAt: new Date().toISOString(),
@@ -259,11 +304,11 @@ export default function Order() {
           }
         });
       } else {
-        Alert.alert('Error', result.message || 'Failed to create order');
+        Alert.alert('Error', result.message || 'Failed to process order');
       }
     } catch (error) {
       console.error('Order submission error:', error);
-      Alert.alert('Error', 'An error occurred while submitting the order');
+      Alert.alert('Error', 'An error occurred while processing the order');
     }
   };
 

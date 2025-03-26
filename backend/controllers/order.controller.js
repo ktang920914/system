@@ -39,18 +39,18 @@ export const createOrder = async (req, res, next) => {
         await newOrder.save();
 
         // 额外验证：检查所有价格是否为有效数字
-    const hasInvalidPrices = [
-        ...orderitems.map(i => isNaN(i.orderproductprice)),
-        ...ordercomboitem.map(c => isNaN(c.comboproductprice))
-      ].some(Boolean);
-  
-      if (hasInvalidPrices) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid price values detected'
-        });
-      }
-        
+        const hasInvalidPrices = [
+            ...validatedOrderItems.map(i => isNaN(i.orderproductprice)),
+            ...validatedComboItems.map(c => isNaN(c.comboproductprice))
+          ].some(Boolean);
+      
+          if (hasInvalidPrices) {
+            return res.status(400).json({
+              success: false,
+              message: 'Invalid price values detected'
+            });
+          }
+            
         res.status(201).json({
             success: true,
             ordernumber: newOrder.ordernumber,
@@ -76,10 +76,32 @@ export const getOrders = async (req, res, next) => {
 
 export const updateOrder = async (req, res, next) => {
     try {
-        const { orderId } = req.params;
-        const updatedOrder = await Order.findByIdAndUpdate(
-            orderId,
-            req.body,
+        const { ordernumber } = req.params;
+        const { orderitems, ordercomboitem } = req.body;
+        
+        // Validate and convert numeric fields
+        const validatedOrderItems = orderitems.map(item => ({
+            ...item,
+            orderproductquantity: Number(item.orderproductquantity),
+            orderproductprice: Number(item.orderproductprice)
+        }));
+
+        const validatedComboItems = ordercomboitem.map(combo => ({
+            ...combo,
+            comboproductquantity: Number(combo.comboproductquantity),
+            comboproductprice: Number(combo.comboproductprice),
+            combochooseitems: combo.combochooseitems.map(chooseItem => ({
+                ...chooseItem,
+                combochooseitemquantity: Number(chooseItem.combochooseitemquantity)
+            }))
+        }));
+        
+        const updatedOrder = await Order.findOneAndUpdate(
+            { ordernumber },
+            {
+                orderitems: validatedOrderItems,
+                ordercomboitem: validatedComboItems
+            },
             { new: true }
         );
         
