@@ -34,13 +34,13 @@ const orderSchema = new mongoose.Schema({
           combochooseitemquantity: { type: Number, default: 1 }
         }]
       }],
-    servicetax: {
+    subtotal: {
         type: Number,
-        default: 8,
+        default: 0,
     },
-    saletax: {
+    ordertotal: {
         type: Number,
-        default: 10
+        default: 0
     }
 }, { timestamps: true });
 
