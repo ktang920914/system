@@ -6,6 +6,10 @@ const comboSchema = new mongoose.Schema({
         ref: 'Product',
         required: true,
     },
+    comboprice: {
+        type: Number,
+        required: true,
+    },
     option: {
         type: Number,
         required: true,

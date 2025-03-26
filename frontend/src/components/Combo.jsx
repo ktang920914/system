@@ -198,6 +198,7 @@ const Combo = () => {
             <Table hoverable className='shadow-md mt-4'>
                 <Table.Head>
                     <Table.HeadCell>Combo Name</Table.HeadCell>
+                    <Table.HeadCell>Combo Price</Table.HeadCell>
                     <Table.HeadCell>Options</Table.HeadCell>
                     <Table.HeadCell>Choose</Table.HeadCell>
                     <Table.HeadCell>Product Name</Table.HeadCell>
@@ -213,6 +214,9 @@ const Combo = () => {
                                     <>
                                         <Table.Cell rowSpan={combo.productDetails.length}>
                                             {combo.comboName.productname}
+                                        </Table.Cell>
+                                        <Table.Cell rowSpan={combo.productDetails.length}>
+                                            RM{combo.comboprice}
                                         </Table.Cell>
                                         <Table.Cell rowSpan={combo.productDetails.length}>
                                             {combo.option}

@@ -1,5 +1,5 @@
 import Combo from '../models/combo.model.js';
-import {Product} from '../models/product.model.js'; // Import the Product model
+import {Product} from '../models/product.model.js';
 import { errorHandler } from '../utils/error.js';
 
 export const createCombo = async (req, res, next) => {
@@ -27,6 +27,7 @@ export const createCombo = async (req, res, next) => {
 
         const newCombo = new Combo({
             comboName,
+            comboprice: product.productprice, // Add the price from the product
             option,
             chooseNumber,
             productDetails,
@@ -41,7 +42,7 @@ export const createCombo = async (req, res, next) => {
 
 export const getCombos = async (req, res, next) => {
     try {
-        const combos = await Combo.find().populate('comboName', 'productname').sort({ createdAt: -1 });
+        const combos = await Combo.find().populate('comboName', 'productname productprice').sort({ createdAt: -1 });
         res.status(200).json(combos);
     } catch (error) {
         next(error);
@@ -58,9 +59,25 @@ export const updateCombo = async (req, res, next) => {
             return next(errorHandler(400, 'Choose number cannot be greater than option'));
         }
 
+        // Get the product price if comboName is being updated
+        let updateData = {
+            option,
+            chooseNumber,
+            productDetails
+        };
+
+        if (comboName) {
+            const product = await Product.findById(comboName);
+            if (!product || product.productcategory !== 'Combo') {
+                return next(errorHandler(400, 'Invalid combo product'));
+            }
+            updateData.comboName = comboName;
+            updateData.comboprice = product.productprice;
+        }
+
         const updatedCombo = await Combo.findByIdAndUpdate(
             comboId,
-            { comboName, option, chooseNumber, productDetails },
+            updateData,
             { new: true }
         );
 
