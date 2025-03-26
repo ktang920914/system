@@ -80,34 +80,31 @@ export default function Order() {
         );
         if (comboData) {
           const comboKey = `combo_${comboData._id}`;
-          const selectionGroups = groupComboSelections(combo, comboData);
+          
+          // Group combo selections by groupIndex
+          const groups = {};
+          combo.combochooseitems.forEach(item => {
+            const groupIndex = item.groupIndex || 0;
+            if (!groups[groupIndex]) {
+              groups[groupIndex] = [];
+            }
+            groups[groupIndex].push({
+              name: item.combochooseitemname,
+              quantity: item.combochooseitemquantity
+            });
+          });
           
           newOrderItems[comboKey] = {
             comboId: comboData._id,
             comboName: comboData.comboName.productname,
             price: Number(combo.comboproductprice),
             quantity: combo.comboproductquantity,
-            selectionGroups: selectionGroups
+            selectionGroups: Object.values(groups)
           };
         }
       });
       
       setOrderItems(newOrderItems);
-    };
-
-    const groupComboSelections = (combo, comboData) => {
-      const selectionGroups = [];
-      const itemsPerGroup = comboData.chooseNumber;
-      const totalItems = combo.combochooseitems.length;
-      
-      // Group selections by quantity
-      for (let i = 0; i < totalItems; i += itemsPerGroup) {
-        selectionGroups.push(
-          combo.combochooseitems.slice(i, i + itemsPerGroup)
-        );
-      }
-      
-      return selectionGroups;
     };
 
     fetchData();
@@ -310,28 +307,17 @@ export default function Order() {
 
   const processComboItem = (orderData, value) => {
     if (value.quantity > 0) {
-      // Merge all selection groups
-      const allSelections = value.selectionGroups.flat();
-      const selectionMap = {};
-      
-      allSelections.forEach(selection => {
-        if (!selectionMap[selection.name]) {
-          selectionMap[selection.name] = 0;
-        }
-        selectionMap[selection.name] += selection.quantity;
-      });
-
-      const combochooseitems = Object.entries(selectionMap).map(([name, qty]) => ({
-        combochooseitemname: name,
-        combochooseitemquantity: qty
-      }));
-
       orderData.ordercomboitem.push({
         comboproductitem: value.comboName,
         comboproductquantity: value.quantity,
         comboproductprice: value.price,
-        combochooseitems: combochooseitems
-      });
+        combochooseitems: value.selectionGroups.flatMap((group, groupIndex) => 
+          group.map(item => ({
+            combochooseitemname: item.name,
+            combochooseitemquantity: item.quantity,
+            groupIndex: groupIndex
+          }))
+      )});
     }
   };
 
