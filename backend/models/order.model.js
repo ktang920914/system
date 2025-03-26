@@ -24,11 +24,13 @@ const orderSchema = new mongoose.Schema({
             type: Number,
             required: true,
         },
+        orderproducttax: Number // 添加税率字段
     }],
     ordercomboitem: [{
         comboproductitem: String,
         comboproductquantity: { type: Number, default: 1 },
         comboproductprice: { type: Number, required: true },
+        comboproducttax: Number, // 添加税率字段
         combochooseitems: [{
           combochooseitemname: String,
           combochooseitemquantity: { type: Number, default: 1 }
