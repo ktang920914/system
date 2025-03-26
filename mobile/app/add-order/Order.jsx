@@ -15,7 +15,8 @@ export default function Order() {
   const [combos, setCombos] = useState([]);
   const [selectedCombo, setSelectedCombo] = useState(null);
   const [showComboModal, setShowComboModal] = useState(false);
-  const [currentComboAction, setCurrentComboAction] = useState(null); // 'add' or 'new'
+  const [currentComboAction, setCurrentComboAction] = useState(null);
+  const [selectedComboChoices, setSelectedComboChoices] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,15 +63,23 @@ export default function Order() {
               if (comboData) {
                 const comboKey = `combo_${comboData._id}`;
                 
+                // 将选择项按数量分组
+                const selectionGroups = [];
+                const itemsPerGroup = comboData.chooseNumber;
+                const totalItems = combo.combochooseitems.length;
+                
+                for (let i = 0; i < totalItems; i += itemsPerGroup) {
+                  selectionGroups.push(
+                    combo.combochooseitems.slice(i, i + itemsPerGroup)
+                  );
+                }
+                
                 newOrderItems[comboKey] = {
                   comboId: comboData._id,
                   comboName: comboData.comboName.productname,
                   price: Number(combo.comboproductprice),
                   quantity: combo.comboproductquantity,
-                  selections: combo.combochooseitems.map(item => ({
-                    name: item.combochooseitemname,
-                    quantity: item.combochooseitemquantity
-                  }))
+                  selectionGroups: selectionGroups
                 };
               }
             });
@@ -111,6 +120,7 @@ export default function Order() {
   const handleComboPress = (combo) => {
     setSelectedCombo(combo);
     setCurrentComboAction('new');
+    setSelectedComboChoices([]);
     setShowComboModal(true);
   };
 
@@ -118,22 +128,22 @@ export default function Order() {
     setOrderItems(prev => {
       const currentItem = prev[comboKey];
       if (!currentItem) {
-        // If no existing combo, show modal to select first item
         const combo = combos.find(c => `combo_${c._id}` === comboKey);
         if (combo) {
           setSelectedCombo(combo);
           setCurrentComboAction('new');
+          setSelectedComboChoices([]);
           setShowComboModal(true);
         }
         return prev;
       }
 
       if (change > 0) {
-        // When increasing quantity, show modal to select new items
         const combo = combos.find(c => c._id === currentItem.comboId);
         if (combo) {
           setSelectedCombo(combo);
           setCurrentComboAction('add');
+          setSelectedComboChoices([]);
           setShowComboModal(true);
         }
         return prev;
@@ -146,20 +156,19 @@ export default function Order() {
           return newItems;
         }
         
-        // When decreasing quantity, remove the last selection
         return {
           ...prev,
           [comboKey]: {
             ...currentItem,
             quantity: newQuantity,
-            selections: currentItem.selections.slice(0, newQuantity)
+            selectionGroups: currentItem.selectionGroups.slice(0, newQuantity)
           }
         };
       }
     });
   };
 
-  const handleComboItemSelect = (comboId, productName, quantity) => {
+  const handleComboItemSelect = (comboId, selections) => {
     const combo = combos.find(c => c._id === comboId);
     if (!combo) return;
 
@@ -172,30 +181,28 @@ export default function Order() {
         comboName: combo.comboName.productname,
         price: Number(combo.comboName.productprice),
         quantity: 0,
-        selections: []
+        selectionGroups: []
       };
 
       if (currentComboAction === 'add') {
-        // Add to existing selections and increase quantity
         return {
           ...prev,
           [comboKey]: {
             ...currentItem,
             quantity: currentItem.quantity + 1,
-            selections: [
-              ...currentItem.selections,
-              { name: productName, quantity }
+            selectionGroups: [
+              ...currentItem.selectionGroups,
+              selections
             ]
           }
         };
       } else {
-        // Create new combo item
         return {
           ...prev,
           [comboKey]: {
             ...currentItem,
             quantity: 1,
-            selections: [{ name: productName, quantity }]
+            selectionGroups: [selections]
           }
         };
       }
@@ -233,9 +240,11 @@ export default function Order() {
           }
         } else {
           if (value.quantity > 0) {
-            // Group selections by item name and sum quantities
+            // 合并所有选择组的选项
+            const allSelections = value.selectionGroups.flat();
             const selectionMap = {};
-            value.selections.forEach(selection => {
+            
+            allSelections.forEach(selection => {
               if (!selectionMap[selection.name]) {
                 selectionMap[selection.name] = 0;
               }
@@ -319,15 +328,16 @@ export default function Order() {
               RM {item.productprice.toFixed(2)}
             </Text>
             
-            {comboInOrder?.selections?.length > 0 && (
-              <View className="mb-2">
-                {comboInOrder.selections.map((selection, idx) => (
-                  <Text key={idx} className="text-xs text-gray-500">
+            {comboInOrder?.selectionGroups?.map((group, groupIndex) => (
+              <View key={groupIndex} className="mb-2">
+                <Text className="text-xs text-gray-500">Set {groupIndex + 1}:</Text>
+                {group.map((selection, idx) => (
+                  <Text key={idx} className="text-xs text-gray-500 ml-2">
                     • {selection.name} (x{selection.quantity})
                   </Text>
                 ))}
               </View>
-            )}
+            ))}
             
             <View className="flex-row items-center">
               <TouchableOpacity 
@@ -444,36 +454,86 @@ export default function Order() {
         visible={showComboModal}
         animationType="slide"
         transparent={false}
-        onRequestClose={() => setShowComboModal(false)}
+        onRequestClose={() => {
+          setSelectedComboChoices([]);
+          setShowComboModal(false);
+        }}
       >
         <View className="flex-1 p-4">
           <View className="flex-row justify-between items-center mb-4">
             <Text className="text-xl font-bold">
               {selectedCombo?.comboName?.productname || 'Combo Options'}
             </Text>
-            <TouchableOpacity onPress={() => setShowComboModal(false)}>
+            <TouchableOpacity onPress={() => {
+              setSelectedComboChoices([]);
+              setShowComboModal(false);
+            }}>
               <Text className="text-lg text-[#006b7e]">Close</Text>
             </TouchableOpacity>
           </View>
           
           <Text className="mb-4">
-            Select 1 of {selectedCombo?.option} options:
+            Select {selectedCombo?.chooseNumber} of {selectedCombo?.option} options:
+            {selectedComboChoices.length > 0 && (
+              <Text className="text-green-600"> ({selectedComboChoices.length} selected)</Text>
+            )}
           </Text>
           
-          {selectedCombo?.productDetails?.map((detail, index) => (
+          {selectedCombo?.productDetails?.map((detail, index) => {
+            const isSelected = selectedComboChoices.some(
+              choice => choice.name === detail.productname
+            );
+            
+            return (
+              <TouchableOpacity
+                key={index}
+                className={`p-3 mb-2 border rounded ${
+                  isSelected ? 'bg-blue-100 border-blue-500' : 'bg-white border-gray-300'
+                }`}
+                onPress={() => {
+                  if (isSelected) {
+                    setSelectedComboChoices(prev =>
+                      prev.filter(choice => choice.name !== detail.productname)
+                    );
+                  } else {
+                    if (selectedComboChoices.length < selectedCombo.chooseNumber) {
+                      setSelectedComboChoices(prev => [
+                        ...prev,
+                        { 
+                          name: detail.productname, 
+                          quantity: detail.comboquantity 
+                        }
+                      ]);
+                    } else {
+                      Alert.alert(
+                        "Maximum selections reached",
+                        `You can only choose ${selectedCombo.chooseNumber} options.`
+                      );
+                    }
+                  }
+                }}
+              >
+                <Text className="text-base font-bold">{detail.productname}</Text>
+                <Text className="text-sm text-gray-600">Quantity: {detail.comboquantity}</Text>
+              </TouchableOpacity>
+            );
+          })}
+          
+          {selectedComboChoices.length === selectedCombo?.chooseNumber && (
             <TouchableOpacity
-              key={index}
-              className="p-3 mb-2 border rounded bg-white border-gray-300"
-              onPress={() => handleComboItemSelect(
-                selectedCombo._id, 
-                detail.productname, 
-                detail.comboquantity
-              )}
+              className="mt-4 p-3 bg-[#006b7e] rounded items-center"
+              onPress={() => {
+                handleComboItemSelect(
+                  selectedCombo._id,
+                  selectedComboChoices
+                );
+                setSelectedComboChoices([]);
+                setShowComboModal(false);
+              }}
             >
-              <Text className="text-base font-bold">{detail.productname}</Text>
-              <Text className="text-sm text-gray-600">Quantity: {detail.comboquantity}</Text>
+              <Text className="text-white font-bold">Confirm Selection</Text>
             </TouchableOpacity>
-          ))}
+          )}
         </View>
       </Modal>
     </View>
