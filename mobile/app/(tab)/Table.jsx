@@ -91,37 +91,70 @@ export default function Table() {
     return area ? area.areaname : 'Unknown Area';
   }, [areas]);
 
-  // Memoized table item renderer
-  const renderTableItem = useCallback(({ item }) => {
-    let backgroundColor = 'bg-green-200';
-    let statusText = 'Available ';
-    let isClickable = false;
+  // 修改 Table.js 中的 renderTableItem 函数
+const renderTableItem = useCallback(({ item }) => {
+  let backgroundColor = 'bg-green-200';
+  let statusText = 'Available ';
+  let isClickable = false;
 
-    if (item.reserve?.status) {
+  if (item.reserve?.status) {
       backgroundColor = 'bg-red-200';
       statusText = 'Reserved';
-    } else if (item.open?.status) {
+  } else if (item.open?.status) {
       backgroundColor = 'bg-yellow-200';
       statusText = 'Opened   ';
       isClickable = true;
-    }
+  }
 
-    return (
+  const handleTablePress = async () => {
+      try {
+          // 检查该桌子是否有未完成的订单
+          const response = await fetch(
+              `http://192.168.212.66:3000/api/order/get-order-by-table/${item._id}`
+          );
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+              // 如果有订单，导航到订单页面并传递现有订单数据
+              navigation.navigate('add-order/Order', {
+                  tableId: item._id,
+                  tableName: item.tablename,
+                  existingOrder: JSON.stringify({
+                      ordernumber: result.order.ordernumber,
+                      items: result.order.orderitems,
+                      comboItems: result.order.ordercomboitem
+                  })
+              });
+          } else {
+              // 如果没有订单，创建新订单
+              navigation.navigate('add-order/Order', {
+                  tableId: item._id,
+                  tableName: item.tablename
+              });
+          }
+      } catch (error) {
+          console.error('Error checking order:', error);
+          // 出错时仍然允许创建新订单
+          navigation.navigate('add-order/Order', {
+              tableId: item._id,
+              tableName: item.tablename
+          });
+      }
+  };
+
+  return (
       <TouchableOpacity
-        disabled={!isClickable}
-        onPress={() => navigation.navigate('add-order/Order', {
-          tableId: item._id, 
-          tableName: item.tablename 
-        })}
+          disabled={!isClickable}
+          onPress={handleTablePress}
       >
-        <View className={`flex-1 m-2 p-5 rounded-lg ${backgroundColor}`}>
-          <Text className="text-lg font-bold">{item.tablename}</Text>
-          <Text className="text-gray-700">Area: {getAreaNameById(item.area)}</Text>
-          <Text className="text-gray-700">Status: {statusText}</Text>
-        </View>
+          <View className={`flex-1 m-2 p-5 rounded-lg ${backgroundColor}`}>
+              <Text className="text-lg font-bold">{item.tablename}</Text>
+              <Text className="text-gray-700">Area: {getAreaNameById(item.area)}</Text>
+              <Text className="text-gray-700">Status: {statusText}</Text>
+          </View>
       </TouchableOpacity>
-    );
-  }, [getAreaNameById, navigation]);
+  );
+}, [getAreaNameById, navigation]);
 
   // Handler for status changes
   const handleStatusChange = (itemValue) => {

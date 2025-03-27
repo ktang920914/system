@@ -217,33 +217,60 @@ export const deleteOrder = async (req, res, next) => {
     }
 };
 
+// 更新 order.controller.js 中的 updateOrderTotals
 export const updateOrderTotals = async (req, res, next) => {
     try {
         const { ordernumber } = req.params;
-        const { subtotal, taxAmount } = req.body;
+        const { subtotal, taxAmount, status } = req.body;
         
         const updatedOrder = await Order.findOneAndUpdate(
             { ordernumber },
             {
                 subtotal: Number(subtotal),
                 taxtotal: Number(taxAmount),
-                ordertotal: Number(subtotal) + Number(taxAmount)
+                ordertotal: Number(subtotal) + Number(taxAmount),
+                status: status || 'pending' // 更新订单状态
             },
             { new: true }
         );
       
-      if (!updatedOrder) {
-        return res.status(404).json({
-          success: false,
-          message: 'Order not found'
+        if (!updatedOrder) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found'
+            });
+        }
+        
+        res.status(200).json({
+            success: true,
+            order: updatedOrder
         });
-      }
-      
-      res.status(200).json({
-        success: true,
-        order: updatedOrder
-      });
     } catch (error) {
-      next(error);
+        next(error);
     }
-  };
+};
+
+  // 添加到 order.controller.js
+export const getOrderByTable = async (req, res, next) => {
+    try {
+        const { tableId } = req.params;
+        const order = await Order.findOne({ 
+            table: tableId,
+            status: { $ne: 'completed' } // 只查找未完成的订单
+        }).populate('table');
+        
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'No active order found for this table'
+            });
+        }
+        
+        res.status(200).json({
+            success: true,
+            order
+        });
+    } catch (error) {
+        next(error);
+    }
+};

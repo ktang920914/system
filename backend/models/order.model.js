@@ -48,6 +48,11 @@ const orderSchema = new mongoose.Schema({
         type:Number,
         default: 0
     },
+    status: {
+        type: String,
+        enum: ['pending', 'completed', 'cancelled'],
+        default: 'pending'
+    }
 }, { timestamps: true });
 
 const Order = mongoose.model('Order', orderSchema);

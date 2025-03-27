@@ -2,7 +2,7 @@ import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 
-export default function Bill() {
+export default function Cart() {
   const params = useLocalSearchParams();
   const { tableName, orderDetails, tableId } = params || {};
   
@@ -215,42 +215,44 @@ export default function Bill() {
     });
   };
 
-  const handlePay = async () => {
-    try {
+  // 修改 Cart.js 中的 handlePay 函数
+const handlePay = async () => {
+  try {
       if (!parsedOrderDetails?.ordernumber) {
-        Alert.alert('Error', 'No order found');
-        return;
+          Alert.alert('Error', 'No order found');
+          return;
       }
 
       const response = await fetch(
-        `http://192.168.212.66:3000/api/order/update-order-totals/${parsedOrderDetails.ordernumber}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            subtotal: subtotal,
-            taxableAmount: taxableAmount,
-            taxAmount: taxAmount,
-            ordertotal: totalAmount
-          }),
-        }
+          `http://192.168.212.66:3000/api/order/update-order-totals/${parsedOrderDetails.ordernumber}`,
+          {
+              method: 'PUT',
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                  subtotal: subtotal,
+                  taxableAmount: taxableAmount,
+                  taxAmount: taxAmount,
+                  ordertotal: totalAmount,
+                  status: 'completed' // 标记订单为已完成
+              }),
+          }
       );
-  
+
       const result = await response.json();
       
       if (response.ok) {
-        Alert.alert('Success', 'Payment processed successfully');
-        // Navigate to payment complete screen or other action
+          Alert.alert('Success', 'Payment processed successfully');
+          // 导航到支付完成页面或其他操作
       } else {
-        Alert.alert('Error', result.message || 'Payment failed');
+          Alert.alert('Error', result.message || 'Payment failed');
       }
-    } catch (error) {
+  } catch (error) {
       console.error('Payment error:', error);
       Alert.alert('Error', 'An error occurred during payment');
-    }
-  };
+  }
+};
 
   if (loading) {
     return (
