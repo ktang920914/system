@@ -270,13 +270,15 @@ export const updateOrderTotals = async (req, res, next) => {
 };
 
   // 添加到 order.controller.js
-export const getOrderByTable = async (req, res, next) => {
+  export const getOrderByTable = async (req, res, next) => {
     try {
         const { tableId } = req.params;
         const order = await Order.findOne({ 
             table: tableId,
-            status: { $ne: 'completed' } // 只查找未完成的订单
-        }).populate('table');
+            status: { $ne: 'completed' } // Only find pending orders
+        })
+        .sort({ createdAt: -1 }) // Get the most recent order
+        .populate('table');
         
         if (!order) {
             return res.status(404).json({

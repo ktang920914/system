@@ -47,15 +47,32 @@ const Cashier = () => {
       const data = await res.json();
       if (res.ok) {
         const ordersMap = {};
+        
+        // Process all orders, not just the first one found
         data.orders.forEach(order => {
           if (order.table) {
-            ordersMap[order.table._id] = {
-              hasOrder: order.status !== 'completed',
-              ordertotal: safeNumber(order.ordertotal, 'ordertotal'),
-              taxtotal: safeNumber(order.taxtotal, 'taxtotal'),
-              status: order.status,
-              ordernumber: order.ordernumber
-            };
+            // If we already have an order for this table, check if it's pending
+            if (ordersMap[order.table._id]) {
+              // Only overwrite if the new order is pending
+              if (order.status !== 'completed') {
+                ordersMap[order.table._id] = {
+                  hasOrder: true,
+                  ordertotal: safeNumber(order.ordertotal, 'ordertotal'),
+                  taxtotal: safeNumber(order.taxtotal, 'taxtotal'),
+                  status: order.status,
+                  ordernumber: order.ordernumber
+                };
+              }
+            } else {
+              // First order found for this table
+              ordersMap[order.table._id] = {
+                hasOrder: order.status !== 'completed',
+                ordertotal: safeNumber(order.ordertotal, 'ordertotal'),
+                taxtotal: safeNumber(order.taxtotal, 'taxtotal'),
+                status: order.status,
+                ordernumber: order.ordernumber
+              };
+            }
           }
         });
         setTableOrders(ordersMap);
@@ -222,8 +239,13 @@ const Cashier = () => {
   // Get card background color based on order status
   const getCardColor = (tableId) => {
     const orderInfo = tableOrders[tableId];
-    if (!orderInfo?.hasOrder) return 'bg-yellow-200';
-    return orderInfo.status === 'completed' ? 'bg-green-200' : 'bg-red-200';
+    if (!orderInfo) return 'bg-yellow-200'; // No order info (default)
+    
+    // Check if there are any pending orders for this table
+    if (orderInfo.hasOrder && orderInfo.status !== 'completed') {
+      return 'bg-red-200';
+    }
+    return 'bg-yellow-200';
   };
 
   // Get amount text color based on minimum spent
@@ -299,7 +321,7 @@ const Cashier = () => {
                   
                   {orderInfo?.hasOrder && orderInfo.status !== 'completed' && (
                     <Button 
-                      color="success" 
+                      color='success'
                       size="xs"
                       onClick={() => handleCheckPayment(table._id, orderInfo.ordernumber)}
                       disabled={isProcessing}

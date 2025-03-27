@@ -1,4 +1,4 @@
-import { Button, Label, Modal, Select, TextInput } from 'flowbite-react'
+import { Button, Label, Modal, Select, Table, TextInput } from 'flowbite-react'
 import React, { useState } from 'react'
 
 const Bill = () => {
@@ -31,6 +31,16 @@ const Bill = () => {
         <h1 className='text-2xl text-gray-500 font-semibold'>Bills</h1>
         <Button onClick={() => {handlePaymentModal()}}>Payment</Button>
     </div>
+
+    <Table hoverable className='shadow-md mt-4'>
+      <Table.Head>
+          <Table.HeadCell>Date</Table.HeadCell>
+          <Table.HeadCell>Order Number</Table.HeadCell>
+          <Table.HeadCell>Products</Table.HeadCell>
+          <Table.HeadCell>Delete</Table.HeadCell>
+          <Table.HeadCell><span>Edit</span></Table.HeadCell>
+      </Table.Head>
+    </Table>
 
     <Modal show={openPaymentModal} size="md" popup onClose={() => setOpenPaymentModal(false)}>
       <Modal.Header />
