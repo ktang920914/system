@@ -1,4 +1,4 @@
-import { Button, Label, Modal, Select, Table, TextInput } from 'flowbite-react'
+import { Button, Label, Modal, Pagination, Select, Table, TextInput } from 'flowbite-react'
 import React, { useState, useEffect } from 'react'
 
 const Bill = () => {
@@ -7,6 +7,8 @@ const Bill = () => {
   const [openPaymentModal, setOpenPaymentModal] = useState(false)
   const [errorMessage, setErrorMessage] = useState(null)
   const [selectedOrder, setSelectedOrder] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -69,6 +71,15 @@ const Bill = () => {
     return products.join('\n');
   }
 
+  // Pagination calculations
+  const totalPages = Math.ceil(orders.length / ITEMS_PER_PAGE);
+
+  const getPaginationData = () => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return orders.slice(startIndex, endIndex);
+  };
+
   return (
     <div className='w-full max-w-5xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar
    scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
@@ -86,7 +97,7 @@ const Bill = () => {
           <Table.HeadCell>Payment</Table.HeadCell>
       </Table.Head>
       <Table.Body className="divide-y">
-        {orders.map((order) => (
+        {getPaginationData().map((order) => (
           <Table.Row key={order._id} className="bg-white dark:border-gray-700 dark:bg-gray-800">
             <Table.Cell className='whitespace-nowrap'>
               {order.ordernumber}
@@ -112,6 +123,14 @@ const Bill = () => {
         ))}
       </Table.Body>
     </Table>
+
+    <div className='flex justify-center mt-4'>
+      <Pagination 
+      currentPage={currentPage}
+      totalPages={totalPages}
+      onPageChange={(page) => setCurrentPage(page)}
+      />
+    </div>
 
     <Modal show={openPaymentModal} size="md" popup onClose={() => setOpenPaymentModal(false)}>
       <Modal.Header />
