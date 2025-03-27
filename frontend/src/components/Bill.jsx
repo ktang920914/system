@@ -60,7 +60,7 @@ const Bill = () => {
         
         if (combo.combochooseitems && combo.combochooseitems.length > 0) {
           combo.combochooseitems.forEach(chooseItem => {
-            products.push(`  - ${combo.comboproductitem} includes ${chooseItem.combochooseitemname} x ${chooseItem.combochooseitemquantity}`);
+            products.push(`  - includes ${chooseItem.combochooseitemname} x ${chooseItem.combochooseitemquantity}`);
           });
         }
       });
