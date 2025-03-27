@@ -26,11 +26,6 @@ export default function Cart() {
     try {
       setRefreshing(true);
       await Promise.all([fetchProducts(), fetchOrders()]);
-      
-      // If we're on the current order tab and it's completed, switch to history
-      if (currentOrder.status === 'completed' && activeTab === 'current') {
-        setActiveTab('history');
-      }
     } catch (error) {
       console.error('Error fetching data:', error);
       Alert.alert('Error', 'Failed to load data');
@@ -61,56 +56,54 @@ export default function Cart() {
       try {
         const parsed = JSON.parse(orderDetails);
         
-        const matchedItems = parsed.items?.map(item => {
-          const product = products.find(p => p.productname === item.orderproductname);
-          return {
-            ...item,
-            orderproducttax: product?.producttax ?? item.orderproducttax
-          };
-        }) || [];
-  
-        const matchedComboItems = parsed.comboItems?.map(combo => {
-          const product = products.find(p => p.productname === combo.comboproductitem);
-          
-          const processChosenItems = (items) => {
-            if (!items) return [];
-            return items.map(item => {
-              if (typeof item === 'string') return item;
-              
-              if (item.combochooseitemname) return item.combochooseitemname;
-              if (item.productname) return item.productname;
-              if (item.name) return item.name;
-              if (item.itemName) return item.itemName;
-              
-              if (item.productId) {
-                const product = products.find(p => p._id === item.productId);
-                return product?.productname || 'Unknown Item';
-              }
-              
-              return 'Unknown Item';
-            }).filter(Boolean);
-          };
-          
-          return {
-            ...combo,
-            comboproducttax: product?.producttax ?? combo.comboproducttax,
-            chosenItems: processChosenItems(combo.combochooseitems),
-            combochooseitems: combo.combochooseitems
-          };
-        }) || [];
-  
-        setCurrentOrder({
-          ordernumber: parsed.ordernumber || '',
-          items: matchedItems,
-          comboItems: matchedComboItems,
-          createdAt: parsed.createdAt || new Date().toISOString(),
-          status: parsed.status || 'pending',
-          updatedAt: parsed.updatedAt || new Date().toISOString()
-        });
-
-        // If order is completed, switch to history tab
-        if (parsed.status === 'completed') {
-          setActiveTab('history');
+        // Only set order if it's not completed
+        if (parsed.status !== 'completed') {
+          const matchedItems = parsed.items?.map(item => {
+            const product = products.find(p => p.productname === item.orderproductname);
+            return {
+              ...item,
+              orderproducttax: product?.producttax ?? item.orderproducttax
+            };
+          }) || [];
+    
+          const matchedComboItems = parsed.comboItems?.map(combo => {
+            const product = products.find(p => p.productname === combo.comboproductitem);
+            
+            const processChosenItems = (items) => {
+              if (!items) return [];
+              return items.map(item => {
+                if (typeof item === 'string') return item;
+                
+                if (item.combochooseitemname) return item.combochooseitemname;
+                if (item.productname) return item.productname;
+                if (item.name) return item.name;
+                if (item.itemName) return item.itemName;
+                
+                if (item.productId) {
+                  const product = products.find(p => p._id === item.productId);
+                  return product?.productname || 'Unknown Item';
+                }
+                
+                return 'Unknown Item';
+              }).filter(Boolean);
+            };
+            
+            return {
+              ...combo,
+              comboproducttax: product?.producttax ?? combo.comboproducttax,
+              chosenItems: processChosenItems(combo.combochooseitems),
+              combochooseitems: combo.combochooseitems
+            };
+          }) || [];
+    
+          setCurrentOrder({
+            ordernumber: parsed.ordernumber || '',
+            items: matchedItems,
+            comboItems: matchedComboItems,
+            createdAt: parsed.createdAt || new Date().toISOString(),
+            status: parsed.status || 'pending',
+            updatedAt: parsed.updatedAt || new Date().toISOString()
+          });
         }
       } catch (error) {
         console.error('Error parsing order details:', error);
@@ -118,7 +111,6 @@ export default function Cart() {
     }
   }, [orderDetails, products]);
 
-  // Calculation functions remain the same
   const calculateSubtotal = () => {
     let subtotal = 0;
     
@@ -262,15 +254,21 @@ export default function Cart() {
       );
   
       if (response.ok) {
-        const result = await response.json();
-        setCurrentOrder(prev => ({ 
-          ...prev, 
-          status: 'completed',
-          subtotal,
-          taxableAmount,
-          taxAmount,
-          ordertotal: totalAmount
-        }));
+        // Reset current order to empty state
+        setCurrentOrder({
+          ordernumber: '',
+          items: [],
+          comboItems: [],
+          createdAt: new Date().toISOString(),
+          status: 'pending'
+        });
+        
+        // Clear navigation params
+        router.setParams({ 
+          orderDetails: null,
+          tableName,
+          tableId
+        });
         
         Alert.alert('Success', 'Payment processed successfully');
         
@@ -377,25 +375,25 @@ export default function Cart() {
   };
 
   const renderCurrentOrder = () => {
-    if (currentOrder.status === 'completed') {
+    if (!currentOrder.ordernumber) {
       return (
         <View className="flex-1 justify-center items-center p-4">
-          <MaterialIcons name="check-circle" size={60} color="#10B981" />
+          <MaterialIcons name="shopping-cart" size={60} color="#6b7280" />
           <Text className="text-xl font-bold mt-4 text-center">
-            Order #{currentOrder.ordernumber} has been paid
-          </Text>
-          <Text className="text-lg text-gray-600 mt-2 text-center">
-            Total: RM {totalAmount.toFixed(2)}
+            No active order
           </Text>
           <Text className="text-gray-500 mt-1 text-center">
-            Paid on {new Date(currentOrder.updatedAt || currentOrder.createdAt).toLocaleString()}
+            Start by adding items to create an order
           </Text>
           
           <TouchableOpacity 
-            onPress={() => setActiveTab('history')}
+            onPress={() => router.navigate({
+              pathname: '/add-order/Order',
+              params: { tableId, tableName }
+            })}
             className="mt-6 bg-blue-500 px-6 py-3 rounded"
           >
-            <Text className="text-white font-medium">View Order History</Text>
+            <Text className="text-white font-medium">Start New Order</Text>
           </TouchableOpacity>
         </View>
       );
@@ -467,22 +465,24 @@ export default function Cart() {
           </View>
         </ScrollView>
     
-        <View className="absolute bottom-0 left-0 right-0 bg-white p-4 border-t border-gray-200">
-          <View className="flex-row justify-between">
-            <TouchableOpacity 
-              onPress={handleAddMoreItems}
-              className="bg-blue-500 px-4 py-3 rounded flex-1 mr-2"
-            >
-              <Text className="text-white text-center font-medium">Add More Items</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={handlePay}
-              className="bg-green-500 px-4 py-3 rounded flex-1 ml-2"
-            >
-              <Text className="text-white text-center font-medium">Pay Now</Text>
-            </TouchableOpacity>
+        {currentOrder.status !== 'completed' && (
+          <View className="absolute bottom-0 left-0 right-0 bg-white p-4 border-t border-gray-200">
+            <View className="flex-row justify-between">
+              <TouchableOpacity 
+                onPress={handleAddMoreItems}
+                className="bg-blue-500 px-4 py-3 rounded flex-1 mr-2"
+              >
+                <Text className="text-white text-center font-medium">Add More Items</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={handlePay}
+                className="bg-green-500 px-4 py-3 rounded flex-1 ml-2"
+              >
+                <Text className="text-white text-center font-medium">Pay Now</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
       </View>
     );
   };
@@ -560,8 +560,8 @@ export default function Cart() {
         <TouchableOpacity
           className={`flex-1 py-3 items-center ${activeTab === 'current' ? 'border-b-2 border-blue-500' : ''}`}
           onPress={() => {
-            if (currentOrder.status === 'completed') {
-              Alert.alert('Info', 'This order has been completed. View order history instead.');
+            if (!currentOrder.ordernumber) {
+              Alert.alert('Info', 'No active order. Create a new order first.');
               return;
             }
             setActiveTab('current');
