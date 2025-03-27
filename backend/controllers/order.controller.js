@@ -101,17 +101,23 @@ export const createOrder = async (req, res, next) => {
     }
 };
 
-export const getOrders = async (req, res, next) => {
+export const getOrders = async (req, res) => {
     try {
-        const orders = await Order.find().populate('table').sort({ createdAt: -1 });
-        res.status(200).json({
-            success: true,
-            orders
-        });
+      const orders = await Order.find()
+        .populate('table') // 确保这里正确 populate 了 table
+        .sort({ createdAt: -1 });
+      
+      res.status(200).json({ 
+        success: true,
+        orders 
+      });
     } catch (error) {
-        next(error);
+      res.status(500).json({ 
+        success: false,
+        message: error.message 
+      });
     }
-};
+  };
 
 export const updateOrder = async (req, res, next) => {
     try {

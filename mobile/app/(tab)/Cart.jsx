@@ -384,6 +384,14 @@ export default function Cart() {
             <Text className="text-gray-500 text-sm">
               {new Date(order.createdAt).toLocaleString()}
             </Text>
+            
+            {/* 显示 table 信息 */}
+            {order.table && (
+              <Text className="mt-1">
+                Table: {typeof order.table === 'object' ? order.table.tablename : order.table}
+              </Text>
+            )}
+            
             <Text className="mt-1">Total: RM {order.ordertotal?.toFixed(2) || '0.00'}</Text>
           </View>
         ))
