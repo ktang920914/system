@@ -1,6 +1,8 @@
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
+import { Tabs } from 'expo-router/tabs';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 export default function Cart() {
   const params = useLocalSearchParams();
@@ -18,6 +20,7 @@ export default function Cart() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState('current');
 
   // Fetch all necessary data
   const fetchData = async () => {
@@ -276,45 +279,7 @@ export default function Cart() {
     </View>
   );
 
-  const renderAllOrders = () => (
-    <View className="mt-5">
-      <Text className="text-lg font-bold mb-2">All Orders:</Text>
-      {allOrders.length === 0 ? (
-        <Text className="text-gray-500">No orders found</Text>
-      ) : (
-        allOrders.map((order) => (
-          <View 
-            key={`order-${order.ordernumber}`}
-            className="mb-4 border border-gray-300 p-3 rounded-lg"
-          >
-            <View className="flex-row justify-between">
-              <Text className="font-bold">Order #{order.ordernumber}</Text>
-              <Text className={`font-bold ${
-                order.status === 'completed' ? 'text-green-600' : 
-                order.status === 'cancelled' ? 'text-red-600' : 'text-blue-600'
-              }`}>
-                {order.status}
-              </Text>
-            </View>
-            <Text className="text-gray-500 text-sm">
-              {new Date(order.createdAt).toLocaleString()}
-            </Text>
-            <Text className="mt-1">Total: RM {order.ordertotal?.toFixed(2) || '0.00'}</Text>
-          </View>
-        ))
-      )}
-    </View>
-  );
-
-  if (loading) {
-    return (
-      <View className="flex-1 justify-center items-center">
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
-
-  return (
+  const renderCurrentOrder = () => (
     <ScrollView 
       className="flex-1 bg-white p-4"
       refreshControl={
@@ -392,9 +357,93 @@ export default function Cart() {
           </TouchableOpacity>
         </View>
       )}
-
-      {/* All Orders Section */}
-      {renderAllOrders()}
     </ScrollView>
+  );
+
+  const renderAllOrders = () => (
+    <ScrollView className="flex-1 bg-white p-4">
+      <Text className="text-2xl font-bold mb-4">All Orders</Text>
+      
+      {allOrders.length === 0 ? (
+        <Text className="text-gray-500">No orders found</Text>
+      ) : (
+        allOrders.map((order) => (
+          <View 
+            key={`order-${order.ordernumber}`}
+            className="mb-4 border border-gray-300 p-3 rounded-lg"
+          >
+            <View className="flex-row justify-between">
+              <Text className="font-bold">Order #{order.ordernumber}</Text>
+              <Text className={`font-bold ${
+                order.status === 'completed' ? 'text-green-600' : 
+                order.status === 'cancelled' ? 'text-red-600' : 'text-blue-600'
+              }`}>
+                {order.status}
+              </Text>
+            </View>
+            <Text className="text-gray-500 text-sm">
+              {new Date(order.createdAt).toLocaleString()}
+            </Text>
+            <Text className="mt-1">Total: RM {order.ordertotal?.toFixed(2) || '0.00'}</Text>
+          </View>
+        ))
+      )}
+    </ScrollView>
+  );
+
+  if (loading) {
+    return (
+      <View className="flex-1 justify-center items-center">
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return (
+    <View className="flex-1">
+      {/* 顶部 Tabs 导航 */}
+      <View className="flex-row border-b border-gray-200">
+        <TouchableOpacity
+          className={`flex-1 py-3 items-center ${activeTab === 'current' ? 'border-b-2 border-blue-500' : ''}`}
+          onPress={() => setActiveTab('current')}
+        >
+          <View className="flex-row items-center">
+            <MaterialIcons 
+              name="shopping-cart" 
+              size={20} 
+              color={activeTab === 'current' ? '#3b82f6' : '#6b7280'} 
+            />
+            <Text 
+              className={`ml-2 ${activeTab === 'current' ? 'text-blue-500 font-bold' : 'text-gray-500'}`}
+            >
+              Current Order
+            </Text>
+          </View>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          className={`flex-1 py-3 items-center ${activeTab === 'history' ? 'border-b-2 border-blue-500' : ''}`}
+          onPress={() => setActiveTab('history')}
+        >
+          <View className="flex-row items-center">
+            <MaterialIcons 
+              name="list-alt" 
+              size={20} 
+              color={activeTab === 'history' ? '#3b82f6' : '#6b7280'} 
+            />
+            <Text 
+              className={`ml-2 ${activeTab === 'history' ? 'text-blue-500 font-bold' : 'text-gray-500'}`}
+            >
+              History Order
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* 内容区域 */}
+      <View className="flex-1">
+        {activeTab === 'current' ? renderCurrentOrder() : renderAllOrders()}
+      </View>
+    </View>
   );
 }
