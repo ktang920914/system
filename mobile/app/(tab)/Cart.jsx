@@ -22,11 +22,15 @@ export default function Cart() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('current');
 
-  // Fetch all necessary data
   const fetchData = async () => {
     try {
       setRefreshing(true);
       await Promise.all([fetchProducts(), fetchOrders()]);
+      
+      // If we're on the current order tab and it's completed, switch to history
+      if (currentOrder.status === 'completed' && activeTab === 'current') {
+        setActiveTab('history');
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       Alert.alert('Error', 'Failed to load data');
@@ -52,7 +56,6 @@ export default function Cart() {
     if (response.ok) setAllOrders(data.orders || []);
   };
 
-  // Parse and set current order details
   useEffect(() => {
     if (orderDetails && products.length > 0) {
       try {
@@ -69,19 +72,16 @@ export default function Cart() {
         const matchedComboItems = parsed.comboItems?.map(combo => {
           const product = products.find(p => p.productname === combo.comboproductitem);
           
-          // Process chosen items with better handling
           const processChosenItems = (items) => {
             if (!items) return [];
             return items.map(item => {
               if (typeof item === 'string') return item;
               
-              // Try different property names to find the item name
               if (item.combochooseitemname) return item.combochooseitemname;
               if (item.productname) return item.productname;
               if (item.name) return item.name;
               if (item.itemName) return item.itemName;
               
-              // If it's an object with productId, find the product name
               if (item.productId) {
                 const product = products.find(p => p._id === item.productId);
                 return product?.productname || 'Unknown Item';
@@ -95,7 +95,7 @@ export default function Cart() {
             ...combo,
             comboproducttax: product?.producttax ?? combo.comboproducttax,
             chosenItems: processChosenItems(combo.combochooseitems),
-            combochooseitems: combo.combochooseitems // Keep original data
+            combochooseitems: combo.combochooseitems
           };
         }) || [];
   
@@ -104,15 +104,21 @@ export default function Cart() {
           items: matchedItems,
           comboItems: matchedComboItems,
           createdAt: parsed.createdAt || new Date().toISOString(),
-          status: parsed.status || 'pending'
+          status: parsed.status || 'pending',
+          updatedAt: parsed.updatedAt || new Date().toISOString()
         });
+
+        // If order is completed, switch to history tab
+        if (parsed.status === 'completed') {
+          setActiveTab('history');
+        }
       } catch (error) {
         console.error('Error parsing order details:', error);
       }
     }
   }, [orderDetails, products]);
 
-  // Calculation functions
+  // Calculation functions remain the same
   const calculateSubtotal = () => {
     let subtotal = 0;
     
@@ -173,7 +179,6 @@ export default function Cart() {
   const nonTaxableAmount = calculateNonTaxableAmount();
   const totalAmount = subtotal + taxAmount;
 
-  // Order modification handlers
   const handleDeleteItem = async (itemName, isCombo = false) => {
     if (currentOrder.status === 'completed') {
       Alert.alert('Error', 'This order has been paid and cannot be modified');
@@ -258,9 +263,20 @@ export default function Cart() {
   
       if (response.ok) {
         const result = await response.json();
-        setCurrentOrder(prev => ({ ...prev, status: 'completed' }));
+        setCurrentOrder(prev => ({ 
+          ...prev, 
+          status: 'completed',
+          subtotal,
+          taxableAmount,
+          taxAmount,
+          ordertotal: totalAmount
+        }));
+        
         Alert.alert('Success', 'Payment processed successfully');
-        fetchOrders(); // Refresh the orders list
+        
+        // Refresh data and switch to history tab
+        await fetchData();
+        setActiveTab('history');
       } else {
         const result = await response.json();
         Alert.alert('Error', result.message || 'Payment failed');
@@ -272,11 +288,9 @@ export default function Cart() {
   };
 
   const renderOrderItem = (item, isCombo = false, index) => {
-    // Get chosen items for combo with their quantities grouped
     const getChosenItems = () => {
       if (!isCombo || !item.combochooseitems) return [];
       
-      // First group items by name and sum their quantities
       const itemMap = new Map();
       
       item.combochooseitems.forEach(choice => {
@@ -286,7 +300,6 @@ export default function Cart() {
         if (typeof choice === 'string') {
           itemName = choice;
         } else {
-          // Get item name
           if (choice.combochooseitemname) itemName = choice.combochooseitemname;
           else if (choice.productname) itemName = choice.productname;
           else if (choice.name) itemName = choice.name;
@@ -297,13 +310,11 @@ export default function Cart() {
           }
           else itemName = 'Unknown Item';
           
-          // Get quantity
           if (choice.chooseitemquantity || choice.combochooseitemquantity) {
             quantity = choice.chooseitemquantity || choice.combochooseitemquantity;
           }
         }
         
-        // Add to map
         if (itemMap.has(itemName)) {
           itemMap.set(itemName, itemMap.get(itemName) + quantity);
         } else {
@@ -311,7 +322,6 @@ export default function Cart() {
         }
       });
       
-      // Convert to array
       return Array.from(itemMap.entries()).map(([name, quantity]) => ({
         name,
         quantity
@@ -338,7 +348,6 @@ export default function Cart() {
             x{quantity} • {taxRate > 0 ? ` Tax: ${taxRate}%` : ' No Tax'}
           </Text>
           
-          {/* Display combo chosen items with quantities */}
           {isCombo && chosenItems.length > 0 && (
             <View className="mt-1">
               <Text className="text-xs text-gray-500">Includes:</Text>
@@ -367,76 +376,97 @@ export default function Cart() {
     );
   };
 
-  const renderCurrentOrder = () => (
-    <View className="flex-1">
-      <ScrollView 
-        className="flex-1 bg-white p-4"
-        contentContainerStyle={{ paddingBottom: 100 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={fetchData}
-          />
-        }
-      >
-        <View className="mb-5 border-b border-gray-200 pb-2.5">
-          <Text className="text-2xl font-bold text-center">Order Bill</Text>
-          <Text className="text-lg text-center mt-1 text-gray-600">Table: {tableName}</Text>
+  const renderCurrentOrder = () => {
+    if (currentOrder.status === 'completed') {
+      return (
+        <View className="flex-1 justify-center items-center p-4">
+          <MaterialIcons name="check-circle" size={60} color="#10B981" />
+          <Text className="text-xl font-bold mt-4 text-center">
+            Order #{currentOrder.ordernumber} has been paid
+          </Text>
+          <Text className="text-lg text-gray-600 mt-2 text-center">
+            Total: RM {totalAmount.toFixed(2)}
+          </Text>
+          <Text className="text-gray-500 mt-1 text-center">
+            Paid on {new Date(currentOrder.updatedAt || currentOrder.createdAt).toLocaleString()}
+          </Text>
+          
+          <TouchableOpacity 
+            onPress={() => setActiveTab('history')}
+            className="mt-6 bg-blue-500 px-6 py-3 rounded"
+          >
+            <Text className="text-white font-medium">View Order History</Text>
+          </TouchableOpacity>
         </View>
-  
-        <View className="mb-5">
-          <View className="flex-row justify-between items-center mb-3">
-            <Text className="text-lg font-bold">Order #{currentOrder.ordernumber || ''}</Text>
-            <Text className={`text-sm ${
-              currentOrder.status === 'completed' ? 'text-green-600' : 
-              currentOrder.status === 'cancelled' ? 'text-red-600' : 'text-blue-600'
-            }`}>
-              {currentOrder.status}
+      );
+    }
+
+    return (
+      <View className="flex-1">
+        <ScrollView 
+          className="flex-1 bg-white p-4"
+          contentContainerStyle={{ paddingBottom: 100 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={fetchData}
+            />
+          }
+        >
+          <View className="mb-5 border-b border-gray-200 pb-2.5">
+            <Text className="text-2xl font-bold text-center">Order Bill</Text>
+            <Text className="text-lg text-center mt-1 text-gray-600">Table: {tableName}</Text>
+          </View>
+    
+          <View className="mb-5">
+            <View className="flex-row justify-between items-center mb-3">
+              <Text className="text-lg font-bold">Order #{currentOrder.ordernumber || ''}</Text>
+              <Text className="text-sm text-blue-600">
+                {currentOrder.status}
+              </Text>
+            </View>
+            
+            <Text className="text-gray-500 mb-2.5">
+              {new Date(currentOrder.updatedAt || currentOrder.createdAt).toLocaleString()}
             </Text>
           </View>
-          
-          <Text className="text-gray-500 mb-2.5">
-            {new Date(currentOrder.updatedAt || currentOrder.createdAt).toLocaleString()}
-          </Text>
-        </View>
-  
-        <View className="mb-5">
-          <Text className="text-lg font-bold mb-2.5">Items:</Text>
-          {currentOrder.items?.length === 0 && currentOrder.comboItems?.length === 0 ? (
-            <Text className="text-gray-500">No items in this order</Text>
-          ) : (
-            <>
-              {currentOrder.items?.map((item, index) => renderOrderItem(item, false, index))}
-              {currentOrder.comboItems?.map((combo, index) => renderOrderItem(combo, true, index))}
-            </>
-          )}
-        </View>
-  
-        <View className="mt-5 border-t border-gray-200 pt-2.5">
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-base">Subtotal:</Text>
-            <Text className="text-base font-bold">RM {subtotal.toFixed(2)}</Text>
+    
+          <View className="mb-5">
+            <Text className="text-lg font-bold mb-2.5">Items:</Text>
+            {currentOrder.items?.length === 0 && currentOrder.comboItems?.length === 0 ? (
+              <Text className="text-gray-500">No items in this order</Text>
+            ) : (
+              <>
+                {currentOrder.items?.map((item, index) => renderOrderItem(item, false, index))}
+                {currentOrder.comboItems?.map((combo, index) => renderOrderItem(combo, true, index))}
+              </>
+            )}
           </View>
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-base">Non-Taxable Amount:</Text>
-            <Text className="text-base">RM {nonTaxableAmount.toFixed(2)}</Text>
+    
+          <View className="mt-5 border-t border-gray-200 pt-2.5">
+            <View className="flex-row justify-between mb-2">
+              <Text className="text-base">Subtotal:</Text>
+              <Text className="text-base font-bold">RM {subtotal.toFixed(2)}</Text>
+            </View>
+            <View className="flex-row justify-between mb-2">
+              <Text className="text-base">Non-Taxable Amount:</Text>
+              <Text className="text-base">RM {nonTaxableAmount.toFixed(2)}</Text>
+            </View>
+            <View className="flex-row justify-between mb-2">
+              <Text className="text-base">Taxable Amount:</Text>
+              <Text className="text-base">RM {taxableAmount.toFixed(2)}</Text>
+            </View>
+            <View className="flex-row justify-between mb-2">
+              <Text className="text-base">Tax:</Text>
+              <Text className="text-base font-bold">RM {taxAmount.toFixed(2)}</Text>
+            </View>
+            <View className="flex-row justify-between mb-2 mt-2.5 pt-2.5 border-t border-gray-200">
+              <Text className="text-lg font-bold">Total:</Text>
+              <Text className="text-lg font-bold text-teal-700">RM {totalAmount.toFixed(2)}</Text>
+            </View>
           </View>
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-base">Taxable Amount:</Text>
-            <Text className="text-base">RM {taxableAmount.toFixed(2)}</Text>
-          </View>
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-base">Tax:</Text>
-            <Text className="text-base font-bold">RM {taxAmount.toFixed(2)}</Text>
-          </View>
-          <View className="flex-row justify-between mb-2 mt-2.5 pt-2.5 border-t border-gray-200">
-            <Text className="text-lg font-bold">Total:</Text>
-            <Text className="text-lg font-bold text-teal-700">RM {totalAmount.toFixed(2)}</Text>
-          </View>
-        </View>
-      </ScrollView>
-  
-      {currentOrder.status !== 'completed' && (
+        </ScrollView>
+    
         <View className="absolute bottom-0 left-0 right-0 bg-white p-4 border-t border-gray-200">
           <View className="flex-row justify-between">
             <TouchableOpacity 
@@ -453,21 +483,42 @@ export default function Cart() {
             </TouchableOpacity>
           </View>
         </View>
-      )}
-    </View>
-  );
+      </View>
+    );
+  };
 
   const renderAllOrders = () => (
-    <ScrollView className="flex-1 bg-white p-4">
+    <ScrollView 
+      className="flex-1 bg-white p-4"
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={fetchData}
+        />
+      }
+    >
       <Text className="text-2xl font-bold mb-4">All Orders</Text>
       
       {allOrders.length === 0 ? (
         <Text className="text-gray-500">No orders found</Text>
       ) : (
         allOrders.map((order) => (
-          <View 
+          <TouchableOpacity
             key={`order-${order.ordernumber}`}
             className="mb-4 border border-gray-300 p-3 rounded-lg"
+            onPress={() => {
+              if (order.status === 'completed') return;
+              
+              setCurrentOrder({
+                ordernumber: order.ordernumber,
+                items: order.orderitems || [],
+                comboItems: order.ordercomboitem || [],
+                createdAt: order.createdAt,
+                status: order.status,
+                updatedAt: order.updatedAt
+              });
+              setActiveTab('current');
+            }}
           >
             <View className="flex-row justify-between">
               <Text className="font-bold">Order #{order.ordernumber}</Text>
@@ -489,7 +540,7 @@ export default function Cart() {
             )}
             
             <Text className="mt-1">Total: RM {order.ordertotal?.toFixed(2) || '0.00'}</Text>
-          </View>
+          </TouchableOpacity>
         ))
       )}
     </ScrollView>
@@ -508,7 +559,13 @@ export default function Cart() {
       <View className="flex-row border-b border-gray-200">
         <TouchableOpacity
           className={`flex-1 py-3 items-center ${activeTab === 'current' ? 'border-b-2 border-blue-500' : ''}`}
-          onPress={() => setActiveTab('current')}
+          onPress={() => {
+            if (currentOrder.status === 'completed') {
+              Alert.alert('Info', 'This order has been completed. View order history instead.');
+              return;
+            }
+            setActiveTab('current');
+          }}
         >
           <View className="flex-row items-center">
             <MaterialIcons 
@@ -537,7 +594,7 @@ export default function Cart() {
             <Text 
               className={`ml-2 ${activeTab === 'history' ? 'text-blue-500 font-bold' : 'text-gray-500'}`}
             >
-              History Order
+              Order History
             </Text>
           </View>
         </TouchableOpacity>
