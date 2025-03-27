@@ -389,17 +389,14 @@ export default function Cart() {
             No active order
           </Text>
           <Text className="text-gray-500 mt-1 text-center">
-            Start by adding items to create an order
+            Start by selecting a table to create an order
           </Text>
           
           <TouchableOpacity 
-            onPress={() => router.navigate({
-              pathname: '/add-order/Order',
-              params: { tableId, tableName }
-            })}
+            onPress={() => router.navigate('(tab)/Table')} // Changed to navigate to tables page
             className="mt-6 bg-blue-500 px-6 py-3 rounded"
           >
-            <Text className="text-white font-medium">Start New Order</Text>
+            <Text className="text-white font-medium">Select Table</Text>
           </TouchableOpacity>
         </View>
       );
@@ -565,13 +562,7 @@ export default function Cart() {
       <View className="flex-row border-b border-gray-200">
         <TouchableOpacity
           className={`flex-1 py-3 items-center ${activeTab === 'current' ? 'border-b-2 border-blue-500' : ''}`}
-          onPress={() => {
-            if (!currentOrder.ordernumber) {
-              Alert.alert('Info', 'No active order. Create a new order first.');
-              return;
-            }
-            setActiveTab('current');
-          }}
+          onPress={() => setActiveTab('current')}
         >
           <View className="flex-row items-center">
             <MaterialIcons 
