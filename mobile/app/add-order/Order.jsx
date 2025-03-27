@@ -339,7 +339,7 @@ export default function Order() {
       : result.ordernumber;
     
     router.replace({
-      pathname: '/(tab)/Bill',
+      pathname: '/(tab)/Cart',
       params: {
         tableName,
         tableId,

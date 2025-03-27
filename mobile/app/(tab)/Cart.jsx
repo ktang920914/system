@@ -273,7 +273,7 @@ export default function Bill() {
         </View>
         
         <Text className="text-gray-500 mb-2.5">
-          {new Date(parsedOrderDetails?.updatedAt || parsedOrderDetails?.createdAt || new Date()).toLocaleString()}
+          {new Date(parsedOrderDetails?.updatedAt || parsedOrderDetails?.updatedAt || new Date()).toLocaleString()}
         </Text>
       </View>
 
