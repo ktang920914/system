@@ -309,7 +309,7 @@ const Cashier = () => {
   return (
     <div className='w-full max-w-5xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
       {/* Payment Modal */}
-      <Modal show={showPaymentModal} onClose={() => setShowPaymentModal(false)}>
+      <Modal show={showPaymentModal} size='sm' onClose={() => setShowPaymentModal(false)}>
         <Modal.Header>
           {paymentStatus === 'success' ? 'Payment Successful' : 'Payment Error'}
         </Modal.Header>

@@ -56,11 +56,11 @@ const Bill = () => {
     // Add combo items
     if (order.ordercomboitem && order.ordercomboitem.length > 0) {
       order.ordercomboitem.forEach(combo => {
-        products.push(`${combo.comboproductitem} x ${combo.comboproductquantity} (combo)`);
+        products.push(`${combo.comboproductitem} x ${combo.comboproductquantity}`);
         
         if (combo.combochooseitems && combo.combochooseitems.length > 0) {
           combo.combochooseitems.forEach(chooseItem => {
-            products.push(`  - includes ${chooseItem.combochooseitemname} x ${chooseItem.combochooseitemquantity}`);
+            products.push(`  - ${chooseItem.combochooseitemname} x ${chooseItem.combochooseitemquantity}`);
           });
         }
       });
@@ -88,7 +88,7 @@ const Bill = () => {
       <Table.Body className="divide-y">
         {orders.map((order) => (
           <Table.Row key={order._id} className="bg-white dark:border-gray-700 dark:bg-gray-800">
-            <Table.Cell className="whitespace-nowrap font-medium text-gray-900 dark:text-white">
+            <Table.Cell className='whitespace-nowrap'>
               {order.ordernumber}
             </Table.Cell>
             <Table.Cell className="whitespace-pre-line">
