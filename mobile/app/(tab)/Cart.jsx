@@ -65,15 +65,40 @@ export default function Cart() {
             orderproducttax: product?.producttax ?? item.orderproducttax
           };
         }) || [];
-
+  
         const matchedComboItems = parsed.comboItems?.map(combo => {
           const product = products.find(p => p.productname === combo.comboproductitem);
+          
+          // Process chosen items with better handling
+          const processChosenItems = (items) => {
+            if (!items) return [];
+            return items.map(item => {
+              if (typeof item === 'string') return item;
+              
+              // Try different property names to find the item name
+              if (item.combochooseitemname) return item.combochooseitemname;
+              if (item.productname) return item.productname;
+              if (item.name) return item.name;
+              if (item.itemName) return item.itemName;
+              
+              // If it's an object with productId, find the product name
+              if (item.productId) {
+                const product = products.find(p => p._id === item.productId);
+                return product?.productname || 'Unknown Item';
+              }
+              
+              return 'Unknown Item';
+            }).filter(Boolean);
+          };
+          
           return {
             ...combo,
-            comboproducttax: product?.producttax ?? combo.comboproducttax
+            comboproducttax: product?.producttax ?? combo.comboproducttax,
+            chosenItems: processChosenItems(combo.combochooseitems),
+            combochooseitems: combo.combochooseitems // Keep original data
           };
         }) || [];
-
+  
         setCurrentOrder({
           ordernumber: parsed.ordernumber || '',
           items: matchedItems,
@@ -246,44 +271,84 @@ export default function Cart() {
     }
   };
 
-  const renderOrderItem = (item, isCombo = false, index) => (
-    <View 
-      key={`${isCombo ? 'combo-' : 'item-'}-${index}`}
-      className={`flex-row justify-between mb-2 pb-2 border-b border-gray-100`}
-    >
-      <View className="flex-1">
-        <Text className="text-base">{isCombo ? `${item.comboproductitem} (Combo)` : item.orderproductname}</Text>
-        <Text className="text-sm text-gray-500">
-          x{isCombo ? item.comboproductquantity : item.orderproductquantity} • 
-          {isCombo ? 
-            (item.comboproducttax > 0 ? ` Tax: ${item.comboproducttax}%` : ' No Tax') : 
-            (item.orderproducttax > 0 ? ` Tax: ${item.orderproducttax}%` : ' No Tax')
-          }
-        </Text>
+  const renderOrderItem = (item, isCombo = false, index) => {
+    // Get chosen items for combo with better handling
+    const getChosenItems = () => {
+      if (!isCombo || !item.combochooseitems) return [];
+      
+      return item.combochooseitems.map(choice => {
+        if (typeof choice === 'string') return choice;
+        
+        // Check various possible property names
+        if (choice.combochooseitemname) return choice.combochooseitemname;
+        if (choice.productname) return choice.productname;
+        if (choice.name) return choice.name;
+        if (choice.itemName) return choice.itemName;
+        
+        // If it's an object with productId, find the product
+        if (choice.productId) {
+          const product = products.find(p => p._id === choice.productId);
+          return product?.productname || 'Unknown Item';
+        }
+        
+        return 'Unknown Item';
+      }).filter(Boolean); // Remove any empty values
+    };
+  
+    const chosenItems = getChosenItems();
+    const itemName = isCombo ? item.comboproductname || item.comboproductitem : item.orderproductname;
+    const quantity = isCombo ? item.comboproductquantity : item.orderproductquantity;
+    const price = isCombo ? item.comboproductprice : item.orderproductprice;
+    const taxRate = isCombo ? item.comboproducttax : item.orderproducttax;
+    const totalPrice = (price || 0) * (quantity || 0);
+
+    return (
+      <View 
+        key={`${isCombo ? 'combo-' : 'item-'}-${index}`}
+        className={`flex-row justify-between mb-2 pb-2 border-b border-gray-100`}
+      >
+        <View className="flex-1">
+          <Text className="text-base font-medium">
+            {isCombo ? `${itemName} (Combo)` : itemName}
+          </Text>
+          <Text className="text-sm text-gray-500">
+            x{quantity} • {taxRate > 0 ? ` Tax: ${taxRate}%` : ' No Tax'}
+          </Text>
+          
+          {/* Display combo chosen items */}
+          {isCombo && chosenItems.length > 0 && (
+            <View className="mt-1">
+              <Text className="text-xs text-gray-500">Includes:</Text>
+              {chosenItems.map((chosenItem, idx) => (
+                <Text key={`chosen-${idx}`} className="text-xs text-gray-500 ml-2">
+                  • {chosenItem}
+                </Text>
+              ))}
+            </View>
+          )}
+        </View>
+        <View className="flex-row items-center">
+          <Text className="text-base font-bold mr-4">
+            RM {totalPrice.toFixed(2)}
+          </Text>
+          {currentOrder.status !== 'completed' && (
+            <TouchableOpacity 
+              onPress={() => handleDeleteItem(itemName, isCombo)}
+              className="bg-red-500 px-2 py-1 rounded"
+            >
+              <Text className="text-white">Delete</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
-      <View className="flex-row items-center">
-        <Text className="text-base font-bold mr-4">
-          RM {((isCombo ? item.comboproductprice : item.orderproductprice || 0) * 
-              (isCombo ? item.comboproductquantity : item.orderproductquantity || 0)).toFixed(2)}
-        </Text>
-        {currentOrder.status !== 'completed' && (
-          <TouchableOpacity 
-            onPress={() => handleDeleteItem(isCombo ? item.comboproductitem : item.orderproductname, isCombo)}
-            className="bg-red-500 px-2 py-1 rounded"
-          >
-            <Text className="text-white">Delete</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
+    );
+  };
 
   const renderCurrentOrder = () => (
     <View className="flex-1">
-      {/* Main scrollable content */}
       <ScrollView 
         className="flex-1 bg-white p-4"
-        contentContainerStyle={{ paddingBottom: 100 }} // Add extra padding at bottom
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -291,7 +356,6 @@ export default function Cart() {
           />
         }
       >
-        {/* Current Order Section */}
         <View className="mb-5 border-b border-gray-200 pb-2.5">
           <Text className="text-2xl font-bold text-center">Order Bill</Text>
           <Text className="text-lg text-center mt-1 text-gray-600">Table: {tableName}</Text>
@@ -315,8 +379,14 @@ export default function Cart() {
   
         <View className="mb-5">
           <Text className="text-lg font-bold mb-2.5">Items:</Text>
-          {currentOrder.items?.map((item, index) => renderOrderItem(item, false, index))}
-          {currentOrder.comboItems?.map((combo, index) => renderOrderItem(combo, true, index))}
+          {currentOrder.items?.length === 0 && currentOrder.comboItems?.length === 0 ? (
+            <Text className="text-gray-500">No items in this order</Text>
+          ) : (
+            <>
+              {currentOrder.items?.map((item, index) => renderOrderItem(item, false, index))}
+              {currentOrder.comboItems?.map((combo, index) => renderOrderItem(combo, true, index))}
+            </>
+          )}
         </View>
   
         <View className="mt-5 border-t border-gray-200 pt-2.5">
@@ -343,7 +413,6 @@ export default function Cart() {
         </View>
       </ScrollView>
   
-      {/* Fixed buttons at bottom */}
       {currentOrder.status !== 'completed' && (
         <View className="absolute bottom-0 left-0 right-0 bg-white p-4 border-t border-gray-200">
           <View className="flex-row justify-between">
@@ -390,7 +459,6 @@ export default function Cart() {
               {new Date(order.createdAt).toLocaleString()}
             </Text>
             
-            {/* 显示 table 信息 */}
             {order.table && (
               <Text className="mt-1">
                 Table: {typeof order.table === 'object' ? order.table.tablename : order.table}
@@ -414,7 +482,6 @@ export default function Cart() {
 
   return (
     <View className="flex-1">
-      {/* 顶部 Tabs 导航 */}
       <View className="flex-row border-b border-gray-200">
         <TouchableOpacity
           className={`flex-1 py-3 items-center ${activeTab === 'current' ? 'border-b-2 border-blue-500' : ''}`}
@@ -453,7 +520,6 @@ export default function Cart() {
         </TouchableOpacity>
       </View>
 
-      {/* 内容区域 */}
       <View className="flex-1">
         {activeTab === 'current' ? renderCurrentOrder() : renderAllOrders()}
       </View>
