@@ -272,39 +272,50 @@ export default function Cart() {
   };
 
   const renderOrderItem = (item, isCombo = false, index) => {
-    // Get chosen items for combo with quantity handling
+    // Get chosen items for combo with their quantities grouped
     const getChosenItems = () => {
       if (!isCombo || !item.combochooseitems) return [];
       
-      // First, count occurrences of each item
-      const itemCounts = {};
+      // First group items by name and sum their quantities
+      const itemMap = new Map();
       
       item.combochooseitems.forEach(choice => {
         let itemName;
+        let quantity = 1;
         
         if (typeof choice === 'string') {
           itemName = choice;
         } else {
-          // Check various possible property names
+          // Get item name
           if (choice.combochooseitemname) itemName = choice.combochooseitemname;
           else if (choice.productname) itemName = choice.productname;
           else if (choice.name) itemName = choice.name;
           else if (choice.itemName) itemName = choice.itemName;
-          // If it's an object with productId, find the product
           else if (choice.productId) {
             const product = products.find(p => p._id === choice.productId);
             itemName = product?.productname || 'Unknown Item';
           }
           else itemName = 'Unknown Item';
+          
+          // Get quantity
+          if (choice.chooseitemquantity || choice.combochooseitemquantity) {
+            quantity = choice.chooseitemquantity || choice.combochooseitemquantity;
+          }
         }
         
-        itemCounts[itemName] = (itemCounts[itemName] || 0) + 1;
+        // Add to map
+        if (itemMap.has(itemName)) {
+          itemMap.set(itemName, itemMap.get(itemName) + quantity);
+        } else {
+          itemMap.set(itemName, quantity);
+        }
       });
       
-      // Convert to array of strings with quantities
-      return Object.entries(itemCounts).map(([name, count]) => 
-        count > 1 ? `${name} x${count}` : name
-      );
+      // Convert to array
+      return Array.from(itemMap.entries()).map(([name, quantity]) => ({
+        name,
+        quantity
+      }));
     };
     
     const chosenItems = getChosenItems();
@@ -333,7 +344,7 @@ export default function Cart() {
               <Text className="text-xs text-gray-500">Includes:</Text>
               {chosenItems.map((chosenItem, idx) => (
                 <Text key={`chosen-${idx}`} className="text-xs text-gray-500 ml-2">
-                  • {chosenItem}
+                  • {chosenItem.name} {chosenItem.quantity > 1 ? `x${chosenItem.quantity}` : ''}
                 </Text>
               ))}
             </View>
