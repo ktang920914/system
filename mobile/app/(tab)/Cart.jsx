@@ -40,88 +40,102 @@ export default function Cart() {
   }, []);
 
   const fetchProducts = async () => {
-    const response = await fetch('http://192.168.212.66:3000/api/product/get-products');
-    const data = await response.json();
-    if (response.ok) setProducts(data);
+    try {
+      const response = await fetch('http://192.168.212.66:3000/api/product/get-products');
+      const data = await response.json();
+      if (response.ok) setProducts(data);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
   };
 
   const fetchOrders = async () => {
-    const response = await fetch('http://192.168.212.66:3000/api/order/get-orders');
-    const data = await response.json();
-    if (response.ok) setAllOrders(data.orders || []);
+    try {
+      const response = await fetch('http://192.168.212.66:3000/api/order/get-orders');
+      const data = await response.json();
+      if (response.ok) setAllOrders(data.orders || []);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    }
   };
 
   useEffect(() => {
-    if (orderDetails && products.length > 0) {
-      try {
-        const parsed = JSON.parse(orderDetails);
-        
-        // Only set order if it's not completed
-        if (parsed.status !== 'completed') {
-          const matchedItems = parsed.items?.map(item => {
-            const product = products.find(p => p.productname === item.orderproductname);
-            return {
-              ...item,
-              orderproducttax: product?.producttax ?? item.orderproducttax
-            };
-          }) || [];
+    if (!orderDetails || orderDetails === 'null' || orderDetails === 'undefined') {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(orderDetails);
+      if (!parsed) return;
+
+      if (parsed.status !== 'completed') {
+        const matchedItems = parsed.items?.map(item => {
+          const product = products.find(p => p.productname === item.orderproductname);
+          return {
+            ...item,
+            orderproducttax: product?.producttax ?? item.orderproducttax
+          };
+        }) || [];
     
-          const matchedComboItems = parsed.comboItems?.map(combo => {
-            const product = products.find(p => p.productname === combo.comboproductitem);
-            
-            const processChosenItems = (items) => {
-              if (!items) return [];
-              return items.map(item => {
-                if (typeof item === 'string') return item;
-                
-                if (item.combochooseitemname) return item.combochooseitemname;
-                if (item.productname) return item.productname;
-                if (item.name) return item.name;
-                if (item.itemName) return item.itemName;
-                
-                if (item.productId) {
-                  const product = products.find(p => p._id === item.productId);
-                  return product?.productname || 'Unknown Item';
-                }
-                
-                return 'Unknown Item';
-              }).filter(Boolean);
-            };
-            
-            return {
-              ...combo,
-              comboproducttax: product?.producttax ?? combo.comboproducttax,
-              chosenItems: processChosenItems(combo.combochooseitems),
-              combochooseitems: combo.combochooseitems
-            };
-          }) || [];
+        const matchedComboItems = parsed.comboItems?.map(combo => {
+          const product = products.find(p => p.productname === combo.comboproductitem);
+          
+          const processChosenItems = (items) => {
+            if (!items) return [];
+            return items.map(item => {
+              if (typeof item === 'string') return item;
+              
+              if (item.combochooseitemname) return item.combochooseitemname;
+              if (item.productname) return item.productname;
+              if (item.name) return item.name;
+              if (item.itemName) return item.itemName;
+              
+              if (item.productId) {
+                const product = products.find(p => p._id === item.productId);
+                return product?.productname || 'Unknown Item';
+              }
+              
+              return 'Unknown Item';
+            }).filter(Boolean);
+          };
+          
+          return {
+            ...combo,
+            comboproducttax: product?.producttax ?? combo.comboproducttax,
+            chosenItems: processChosenItems(combo.combochooseitems),
+            combochooseitems: combo.combochooseitems
+          };
+        }) || [];
     
-          setCurrentOrder({
-            ordernumber: parsed.ordernumber || '',
-            items: matchedItems,
-            comboItems: matchedComboItems,
-            createdAt: parsed.createdAt || new Date().toISOString(),
-            status: parsed.status || 'pending',
-            updatedAt: parsed.updatedAt || new Date().toISOString()
-          });
-        }
-      } catch (error) {
-        console.error('Error parsing order details:', error);
+        setCurrentOrder({
+          ordernumber: parsed.ordernumber || '',
+          items: matchedItems,
+          comboItems: matchedComboItems,
+          createdAt: parsed.createdAt || new Date().toISOString(),
+          status: parsed.status || 'pending',
+          updatedAt: parsed.updatedAt || new Date().toISOString()
+        });
       }
+    } catch (error) {
+      console.error('Error parsing order details:', error);
+      setCurrentOrder({
+        ordernumber: '',
+        items: [],
+        comboItems: [],
+        createdAt: new Date().toISOString(),
+        status: 'pending'
+      });
     }
   }, [orderDetails, products]);
 
   const calculateSubtotal = () => {
     let subtotal = 0;
-    
     currentOrder.items?.forEach(item => {
       subtotal += (item.orderproductprice || 0) * (item.orderproductquantity || 0);
     });
-    
     currentOrder.comboItems?.forEach(combo => {
       subtotal += (combo.comboproductprice || 0) * (combo.comboproductquantity || 0);
     });
-    
     return subtotal;
   };
 
@@ -152,17 +166,14 @@ export default function Cart() {
 
   const calculateNonTaxableAmount = () => {
     let nonTaxableAmount = 0;
-
     currentOrder.items?.forEach(item => {
       const itemTotal = (item.orderproductprice || 0) * (item.orderproductquantity || 0);
       if (item.orderproducttax === 0) nonTaxableAmount += itemTotal;
     });
-    
     currentOrder.comboItems?.forEach(combo => {
       const comboTotal = (combo.comboproductprice || 0) * (combo.comboproductquantity || 0);
       if (combo.comboproducttax === 0) nonTaxableAmount += comboTotal;
     });
-    
     return nonTaxableAmount;
   };
 
@@ -205,7 +216,6 @@ export default function Cart() {
           comboItems: updatedCombos,
           updatedAt: new Date().toISOString()
         }));
-        Alert.alert('Success', 'Item removed successfully');
       } else {
         const result = await response.json();
         Alert.alert('Error', result.message || 'Failed to remove item');
@@ -254,7 +264,6 @@ export default function Cart() {
       );
   
       if (response.ok) {
-        // Reset current order to empty state
         setCurrentOrder({
           ordernumber: '',
           items: [],
@@ -263,18 +272,15 @@ export default function Cart() {
           status: 'pending'
         });
         
-        // Clear navigation params
         router.setParams({ 
-          orderDetails: null,
           tableName,
-          tableId
+          tableId,
+          orderDetails: undefined
         });
         
-        Alert.alert('Success', 'Payment processed successfully');
-        
-        // Refresh data and switch to history tab
         await fetchData();
         setActiveTab('history');
+        Alert.alert('Success', 'Payment processed successfully');
       } else {
         const result = await response.json();
         Alert.alert('Error', result.message || 'Payment failed');
