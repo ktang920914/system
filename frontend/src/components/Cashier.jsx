@@ -6,11 +6,27 @@ const Cashier = () => {
   const [areas, setAreas] = useState([]);
   const [selectedArea, setSelectedArea] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [tableOrders, setTableOrders] = useState({}); // 存储每个桌子的订单信息
+  const [tableOrders, setTableOrders] = useState({});
+  const [isProcessing, setIsProcessing] = useState(false);
   const ITEMS_PER_PAGE = 7;
 
+  // Enhanced safeNumber function with logging and default value
+  const safeNumber = (value, fieldName = '', defaultValue = 0) => {
+    if (value === null || value === undefined || value === '') {
+      console.warn(`Empty value for ${fieldName}, using default ${defaultValue}`);
+      return defaultValue;
+    }
+    const num = Number(value);
+    if (isNaN(num)) {
+      console.error(`Invalid number conversion for ${fieldName}:`, value);
+      return defaultValue;
+    }
+    return num;
+  };
+
+  // Fetch all areas
   useEffect(() => {
-    const FetchAreas = async () => {
+    const fetchAreas = async () => {
       try {
         const res = await fetch('/api/area/get-areas');
         const data = await res.json();
@@ -18,55 +34,56 @@ const Cashier = () => {
           setAreas(data);
         }
       } catch (error) {
-        console.log(error.message);
+        console.error('Error fetching areas:', error.message);
       }
     };
-    FetchAreas();
+    fetchAreas();
   }, []);
 
-  // 获取每个桌子的订单状态和总金额
+  // Fetch order information for each table
   const fetchTableOrders = async () => {
     try {
       const res = await fetch('/api/order/get-orders');
       const data = await res.json();
       if (res.ok) {
-        // 创建一个对象，存储每个桌子的订单信息
         const ordersMap = {};
         data.orders.forEach(order => {
-          if (order.table && order.status !== 'completed') {
+          if (order.table) {
             ordersMap[order.table._id] = {
-              hasOrder: true,
-              ordertotal: order.ordertotal
+              hasOrder: order.status !== 'completed',
+              ordertotal: safeNumber(order.ordertotal, 'ordertotal'),
+              taxtotal: safeNumber(order.taxtotal, 'taxtotal'),
+              status: order.status,
+              ordernumber: order.ordernumber
             };
           }
         });
         setTableOrders(ordersMap);
       }
     } catch (error) {
-      console.log(error.message);
+      console.error('Error fetching table orders:', error.message);
     }
   };
 
-  // 获取已打开的桌子
+  // Fetch open tables
   const fetchOpenTables = async () => {
     try {
       const res = await fetch('/api/table/get-tables');
       const data = await res.json();
       if (res.ok) {
-        // 根据选择的区域过滤桌子
         const filteredTables = data.filter(table => {
-          const isOpen = table.open.status;
+          const isOpen = table.open?.status;
           const matchesArea = selectedArea ? table.area === selectedArea : true;
           return isOpen && matchesArea;
         });
         setOpenTables(filteredTables);
       }
     } catch (error) {
-      console.log(error.message);
+      console.error('Error fetching open tables:', error.message);
     }
   };
 
-  // 关闭桌子
+  // Close table
   const handleCloseTable = async (tableId) => {
     try {
       const res = await fetch(`/api/table/toggle-open-status/${tableId}`, {
@@ -82,13 +99,100 @@ const Cashier = () => {
         fetchOpenTables();
         fetchTableOrders();
       } else {
-        console.log('Failed to close table');
+        console.error('Failed to close table');
       }
     } catch (error) {
-      console.log(error.message);
+      console.error('Error closing table:', error.message);
     }
   };
 
+  // Enhanced payment handling with complete validation
+  const handleCheckPayment = async (tableId, ordernumber) => {
+    setIsProcessing(true);
+    try {
+        // 获取订单详情
+        const orderRes = await fetch(`/api/order/get-order-by-table/${tableId}`);
+        if (!orderRes.ok) {
+            throw new Error(`Failed to fetch order: ${orderRes.status}`);
+        }
+        
+        const orderData = await orderRes.json();
+        console.log('Order data:', orderData);
+
+        // 验证订单数据
+        if (!orderData || !orderData.order) {
+            throw new Error('Invalid order data received');
+        }
+
+        const order = orderData.order;
+
+        // 计算小计和税收
+        const calculateTotals = (items, isCombo = false) => {
+            let subtotal = 0;
+            let taxtotal = 0;
+
+            items.forEach(item => {
+                const quantity = Math.max(0, Number(item.orderproductquantity) || 0);
+                const price = Math.max(0, Number(item.orderproductprice) || 0);
+                const taxRate = Math.max(0, Math.min(100, 
+                    Number(isCombo ? item.comboproducttax : item.orderproducttax) || 0));
+
+                const itemTotal = price * quantity;
+                subtotal += itemTotal;
+                taxtotal += itemTotal * (taxRate / 100);
+            });
+
+            return { subtotal, taxtotal };
+        };
+
+        // 计算常规商品
+        const regularItems = order.orderitems || [];
+        const regularTotals = calculateTotals(regularItems);
+
+        // 计算套餐商品
+        const comboItems = order.ordercomboitem || [];
+        const comboTotals = calculateTotals(comboItems, true);
+
+        // 汇总所有金额
+        const subtotal = regularTotals.subtotal + comboTotals.subtotal;
+        const taxtotal = regularTotals.taxtotal + comboTotals.taxtotal;
+        const ordertotal = subtotal + taxtotal;
+
+        console.log('Calculated totals:', { subtotal, taxtotal, ordertotal });
+
+        // 验证计算结果
+        if (isNaN(subtotal)) throw new Error('Invalid subtotal calculation');
+        if (isNaN(taxtotal)) throw new Error('Invalid tax calculation');
+        if (isNaN(ordertotal)) throw new Error('Invalid total calculation');
+
+        // 更新订单
+        const updateRes = await fetch(`/api/order/update-order-totals/${ordernumber}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                subtotal,
+                taxAmount: taxtotal,
+                status: 'completed'
+            })
+        });
+
+        if (!updateRes.ok) {
+            const errorData = await updateRes.json();
+            throw new Error(errorData.message || 'Failed to update order');
+        }
+
+        // 刷新数据
+        await Promise.all([fetchOpenTables(), fetchTableOrders()]);
+        alert('Payment processed successfully!');
+    } catch (error) {
+        console.error('Payment error:', error);
+        alert(`Payment failed: ${error.message}`);
+    } finally {
+        setIsProcessing(false);
+    }
+};
+
+  // Set up polling for real-time updates
   useEffect(() => {
     fetchOpenTables();
     fetchTableOrders();
@@ -100,11 +204,13 @@ const Cashier = () => {
     return () => clearInterval(interval);
   }, [selectedArea]);
 
+  // Handle area filter change
   const handleAreaFilterChange = (e) => {
     setSelectedArea(e.target.value);
     setCurrentPage(1);
   };
 
+  // Pagination calculations
   const totalPages = Math.ceil(openTables.length / ITEMS_PER_PAGE);
 
   const getPaginationData = () => {
@@ -113,26 +219,34 @@ const Cashier = () => {
     return openTables.slice(startIndex, endIndex);
   };
 
-  // 根据订单状态获取卡片背景颜色
+  // Get card background color based on order status
   const getCardColor = (tableId) => {
-    return tableOrders[tableId]?.hasOrder ? 'bg-red-200' : 'bg-yellow-200';
+    const orderInfo = tableOrders[tableId];
+    if (!orderInfo?.hasOrder) return 'bg-yellow-200';
+    return orderInfo.status === 'completed' ? 'bg-green-200' : 'bg-red-200';
   };
 
-  // 根据订单金额和最低消费获取金额显示颜色
+  // Get amount text color based on minimum spent
   const getAmountColor = (table) => {
     const orderInfo = tableOrders[table._id];
-    if (!orderInfo) return 'text-gray-500'; // 没有订单时默认颜色
+    if (!orderInfo) return 'text-gray-600';
     
-    return orderInfo.ordertotal >= table.minimumspent 
-      ? 'text-green-500' 
-      : 'text-red-500';
+    const total = safeNumber(orderInfo.ordertotal, 'display total');
+    const minSpent = safeNumber(table.minimumspent, 'minimum spent');
+    
+    return total >= minSpent ? 'text-green-600' : 'text-red-600';
   };
 
   return (
     <div className='w-full max-w-5xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
-      <div className='flex items-center justify-between'>
-        <h1 className='text-2xl font-semibold text-gray-500'>Open Tables</h1>
-        <Select id="areaFilter" onChange={handleAreaFilterChange} value={selectedArea}>
+      <div className='flex items-center justify-between mb-4'>
+        <h1 className='text-2xl font-semibold text-gray-700'>Open Tables</h1>
+        <Select 
+          id="areaFilter" 
+          onChange={handleAreaFilterChange} 
+          value={selectedArea}
+          className='w-48'
+        >
           <option value="">All Areas</option>
           {areas.map((area) => (
             <option key={area._id} value={area._id}>
@@ -141,44 +255,84 @@ const Cashier = () => {
           ))}
         </Select>
       </div>
-      <div className="grid lg:grid-cols-7 md:grid-cols-4 sm:grid-cols-3 gap-4 mt-4">
+      
+      <div className="grid lg:grid-cols-7 md:grid-cols-4 sm:grid-cols-3 gap-4">
         {getPaginationData().map((table) => {
           const orderInfo = tableOrders[table._id];
           return (
-            <Card key={table._id} className={getCardColor(table._id)}>
-              <h3 className="text-lg font-semibold">{table.tablename}</h3>
-              <p className='text-sm'>Pax: {table.tablepax}</p>
-              <p className='text-sm'>Min Spent: RM{table.minimumspent}</p>
-              {orderInfo?.hasOrder && (
-                <p className={`text-sm font-bold ${getAmountColor(table)}`}>
-                  Order Total: RM{orderInfo.ordertotal}
-                </p>
-              )}
-              <p className='text-sm'>Customer: {table.open.customername}</p>
-              <p className='text-sm'>Phone: {table.open.phonenumber}</p>
-              <Badge 
-                color="failure" 
-                className="cursor-pointer flex justify-center" 
-                onClick={() => handleCloseTable(table._id)}
-              >
-                Close
-              </Badge>
-              {orderInfo?.hasOrder && (
-                <Badge color="success" className="flex justify-center mt-2">
-                  Ordered
-                </Badge>
-              )}
+            <Card 
+              key={table._id} 
+              className={`${getCardColor(table._id)} hover:shadow-md transition-shadow`}
+            >
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold text-gray-800">{table.tablename}</h3>
+                <div className="text-sm space-y-1">
+                  <p>Pax: {table.tablepax}</p>
+                  <p>Min Spent: RM{safeNumber(table.minimumspent, 'table min spent').toFixed(2)}</p>
+                  
+                  {orderInfo?.hasOrder && (
+                    <>
+                      <p className={`font-bold ${getAmountColor(table)}`}>
+                        Order Total: RM{safeNumber(orderInfo.ordertotal, 'order total').toFixed(2)}
+                      </p>
+                      <p className="text-xs">
+                        Tax: RM{safeNumber(orderInfo.taxtotal, 'order tax').toFixed(2)}
+                      </p>
+                      <p className="text-xs text-gray-500">Order #: {orderInfo.ordernumber}</p>
+                    </>
+                  )}
+                  
+                  <p>Customer: {table.open?.customername || '-'}</p>
+                  <p>Phone: {table.open?.phonenumber || '-'}</p>
+                </div>
+
+                <div className="flex flex-col gap-2 pt-2">
+                  <Badge
+                    color="failure" 
+                    size="xs"
+                    className='cursor-pointer'
+                    onClick={() => handleCloseTable(table._id)}
+                    disabled={isProcessing}
+                  >
+                    Close Table
+                  </Badge>
+                  
+                  {orderInfo?.hasOrder && orderInfo.status !== 'completed' && (
+                    <Button 
+                      color="success" 
+                      size="xs"
+                      onClick={() => handleCheckPayment(table._id, orderInfo.ordernumber)}
+                      disabled={isProcessing}
+                    >
+                      {isProcessing ? 'Processing...' : 'Check Payment'}
+                    </Button>
+                  )}
+                  
+                  {orderInfo?.hasOrder && (
+                    <Badge 
+                      color={orderInfo.status === 'completed' ? "success" : "warning"} 
+                      className="text-center"
+                    >
+                      {orderInfo.status === 'completed' ? 'Paid' : 'Pending'}
+                    </Badge>
+                  )}
+                </div>
+              </div>
             </Card>
           );
         })}
       </div>
-      <div className='flex justify-center mt-4'>
-        <Pagination 
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={(page) => setCurrentPage(page)}
-        />
-      </div>
+      
+      {openTables.length > ITEMS_PER_PAGE && (
+        <div className='flex justify-center mt-6'>
+          <Pagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            showIcons
+          />
+        </div>
+      )}
     </div>
   );
 };

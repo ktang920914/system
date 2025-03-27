@@ -227,15 +227,27 @@ export const deleteOrder = async (req, res, next) => {
 export const updateOrderTotals = async (req, res, next) => {
     try {
         const { ordernumber } = req.params;
-        const { subtotal, taxAmount, status } = req.body;
+        let { subtotal, taxAmount, status } = req.body;
         
+        // 强制转换为数字并确保不是NaN
+        subtotal = Number(subtotal) || 0;
+        taxAmount = Number(taxAmount) || 0;
+        
+        // 验证计算结果
+        if (isNaN(subtotal)) {
+            throw new Error('Invalid subtotal value');
+        }
+        if (isNaN(taxAmount)) {
+            throw new Error('Invalid taxAmount value');
+        }
+
         const updatedOrder = await Order.findOneAndUpdate(
             { ordernumber },
             {
-                subtotal: Number(subtotal),
-                taxtotal: Number(taxAmount),
-                ordertotal: Number(subtotal) + Number(taxAmount),
-                status: status || 'pending' // 更新订单状态
+                subtotal,
+                taxtotal: taxAmount,
+                ordertotal: subtotal + taxAmount,
+                status: status || 'completed'
             },
             { new: true }
         );
@@ -252,6 +264,7 @@ export const updateOrderTotals = async (req, res, next) => {
             order: updatedOrder
         });
     } catch (error) {
+        console.error('Error updating order totals:', error);
         next(error);
     }
 };
