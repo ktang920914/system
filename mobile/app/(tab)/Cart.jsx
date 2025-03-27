@@ -26,6 +26,24 @@ export default function Cart() {
     try {
       setRefreshing(true);
       await Promise.all([fetchProducts(), fetchOrders()]);
+      
+      // If we have an active order number, fetch its latest state
+      if (currentOrder.ordernumber) {
+        const response = await fetch(
+          `http://192.168.212.66:3000/api/order/get-order/${currentOrder.ordernumber}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentOrder({
+            ordernumber: data.order.ordernumber,
+            items: data.order.orderitems || [],
+            comboItems: data.order.ordercomboitem || [],
+            createdAt: data.order.createdAt,
+            status: data.order.status,
+            updatedAt: data.order.updatedAt
+          });
+        }
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       Alert.alert('Error', 'Failed to load data');
@@ -197,6 +215,15 @@ export default function Cart() {
         ? currentOrder.comboItems.filter(combo => combo.comboproductitem !== itemName)
         : currentOrder.comboItems;
       
+      // First, update the local state immediately for better UX
+      setCurrentOrder(prev => ({
+        ...prev,
+        items: updatedItems,
+        comboItems: updatedCombos,
+        updatedAt: new Date().toISOString()
+      }));
+
+      // Then send the update to the backend
       const response = await fetch(
         `http://192.168.212.66:3000/api/order/update-order/${currentOrder.ordernumber}`,
         {
@@ -209,20 +236,24 @@ export default function Cart() {
         }
       );
       
-      if (response.ok) {
-        setCurrentOrder(prev => ({
-          ...prev,
-          items: updatedItems,
-          comboItems: updatedCombos,
-          updatedAt: new Date().toISOString()
-        }));
-      } else {
+      if (!response.ok) {
+        // If the backend update fails, revert the local state
         const result = await response.json();
         Alert.alert('Error', result.message || 'Failed to remove item');
+        fetchData(); // Refresh data from server to sync state
+      } else {
+        // Success - ensure our local state matches the server
+        const updatedOrder = await response.json();
+        setCurrentOrder({
+          ...updatedOrder.order,
+          items: updatedOrder.order.orderitems || [],
+          comboItems: updatedOrder.order.ordercomboitem || []
+        });
       }
     } catch (error) {
       console.error('Delete error:', error);
       Alert.alert('Error', 'An error occurred while removing the item');
+      fetchData(); // Refresh data from server on error
     }
   };
 
@@ -393,7 +424,7 @@ export default function Cart() {
           </Text>
           
           <TouchableOpacity 
-            onPress={() => router.navigate('(tab)/Table')} // Changed to navigate to tables page
+            onPress={() => router.navigate('(tab)/Table')}
             className="mt-6 bg-blue-500 px-6 py-3 rounded"
           >
             <Text className="text-white font-medium">Select Table</Text>

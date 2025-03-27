@@ -1,6 +1,8 @@
 import Order from "../models/order.model.js";
-import {Product} from "../models/product.model.js";
+import { Product } from "../models/product.model.js";
+import mongoose from "mongoose";
 
+// Create new order
 export const createOrder = async (req, res, next) => {
     try {
         const { table, orderitems, ordercomboitem = [] } = req.body;
@@ -26,7 +28,7 @@ export const createOrder = async (req, res, next) => {
                 ...item,
                 orderproductquantity: quantity,
                 orderproductprice: price,
-                orderproducttax: taxRate // Use product's tax rate
+                orderproducttax: taxRate
             };
         }));
 
@@ -44,7 +46,7 @@ export const createOrder = async (req, res, next) => {
                 ...combo,
                 comboproductquantity: quantity,
                 comboproductprice: price,
-                comboproducttax: taxRate, // Use product's tax rate
+                comboproducttax: taxRate,
                 combochooseitems: (combo.combochooseitems || []).map(chooseItem => ({
                     ...chooseItem,
                     combochooseitemquantity: Number(chooseItem.combochooseitemquantity) || 0
@@ -101,10 +103,11 @@ export const createOrder = async (req, res, next) => {
     }
 };
 
+// Get all orders
 export const getOrders = async (req, res) => {
     try {
       const orders = await Order.find()
-        .populate('table') // 确保这里正确 populate 了 table
+        .populate('table')
         .sort({ createdAt: -1 });
       
       res.status(200).json({ 
@@ -117,15 +120,38 @@ export const getOrders = async (req, res) => {
         message: error.message 
       });
     }
-  };
+};
 
+// Get single order by ordernumber
+export const getOrder = async (req, res, next) => {
+  try {
+    const { ordernumber } = req.params;
+    const order = await Order.findOne({ ordernumber }).populate('table');
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      order
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Update order items
 export const updateOrder = async (req, res, next) => {
     try {
         const { ordernumber } = req.params;
         const { orderitems, ordercomboitem } = req.body;
         
         // Validate and convert numeric fields with product tax rates
-        const validatedOrderItems = await Promise.all(orderitems.map(async (item) => {
+        const validatedOrderItems = await Promise.all((orderitems || []).map(async (item) => {
             const product = await Product.findOne({ productname: item.orderproductname });
             const taxRate = product?.producttax || 0;
             
@@ -133,11 +159,11 @@ export const updateOrder = async (req, res, next) => {
                 ...item,
                 orderproductquantity: Number(item.orderproductquantity),
                 orderproductprice: Number(item.orderproductprice),
-                orderproducttax: taxRate // Use product's tax rate
+                orderproducttax: taxRate
             };
         }));
 
-        const validatedComboItems = await Promise.all(ordercomboitem.map(async (combo) => {
+        const validatedComboItems = await Promise.all((ordercomboitem || []).map(async (combo) => {
             const product = await Product.findOne({ productname: combo.comboproductitem });
             const taxRate = product?.producttax || 0;
             
@@ -145,10 +171,10 @@ export const updateOrder = async (req, res, next) => {
                 ...combo,
                 comboproductquantity: Number(combo.comboproductquantity),
                 comboproductprice: Number(combo.comboproductprice),
-                comboproducttax: taxRate, // Use product's tax rate
-                combochooseitems: combo.combochooseitems.map(chooseItem => ({
+                comboproducttax: taxRate,
+                combochooseitems: (combo.combochooseitems || []).map(chooseItem => ({
                     ...chooseItem,
-                    combochooseitemquantity: Number(chooseItem.combochooseitemquantity)
+                    combochooseitemquantity: Number(chooseItem.combochooseitemquantity || 1)
                 }))
             };
         }));
@@ -178,10 +204,11 @@ export const updateOrder = async (req, res, next) => {
                 ordercomboitem: validatedComboItems,
                 subtotal,
                 taxtotal,
-                ordertotal
+                ordertotal,
+                updatedAt: new Date()
             },
             { new: true }
-        );
+        ).populate('table');
         
         if (!updatedOrder) {
             return res.status(404).json({
@@ -202,55 +229,35 @@ export const updateOrder = async (req, res, next) => {
     }
 };
 
-export const deleteOrder = async (req, res, next) => {
-    try {
-        const { orderId } = req.params;
-        const deletedOrder = await Order.findByIdAndDelete(orderId);
-        
-        if (!deletedOrder) {
-            return res.status(404).json({
-                success: false,
-                message: 'Order not found'
-            });
-        }
-        
-        res.status(200).json({
-            success: true,
-            message: 'Order deleted successfully'
-        });
-    } catch (error) {
-        next(error);
-    }
-};
-
-// 更新 order.controller.js 中的 updateOrderTotals
+// Update order totals and status
 export const updateOrderTotals = async (req, res, next) => {
     try {
         const { ordernumber } = req.params;
-        let { subtotal, taxAmount, status } = req.body;
+        let { subtotal, taxableAmount, taxAmount, ordertotal, status } = req.body;
         
-        // 强制转换为数字并确保不是NaN
+        // Force conversion to numbers and ensure not NaN
         subtotal = Number(subtotal) || 0;
+        taxableAmount = Number(taxableAmount) || 0;
         taxAmount = Number(taxAmount) || 0;
+        ordertotal = Number(ordertotal) || 0;
         
-        // 验证计算结果
-        if (isNaN(subtotal)) {
-            throw new Error('Invalid subtotal value');
-        }
-        if (isNaN(taxAmount)) {
-            throw new Error('Invalid taxAmount value');
+        // Validate calculations
+        if (isNaN(subtotal) || isNaN(taxAmount) || isNaN(ordertotal)) {
+            throw new Error('Invalid numeric values provided');
         }
 
         const updatedOrder = await Order.findOneAndUpdate(
             { ordernumber },
             {
                 subtotal,
+                taxableAmount,
                 taxtotal: taxAmount,
-                ordertotal: subtotal + taxAmount,
-                status: status || 'completed'
+                ordertotal,
+                status: status || 'completed',
+                updatedAt: new Date()
             },
             { new: true }
-        );
+        ).populate('table');
       
         if (!updatedOrder) {
             return res.status(404).json({
@@ -269,8 +276,8 @@ export const updateOrderTotals = async (req, res, next) => {
     }
 };
 
-  // 添加到 order.controller.js
-  export const getOrderByTable = async (req, res, next) => {
+// Get order by table
+export const getOrderByTable = async (req, res, next) => {
     try {
         const { tableId } = req.params;
         const order = await Order.findOne({ 
@@ -290,6 +297,28 @@ export const updateOrderTotals = async (req, res, next) => {
         res.status(200).json({
             success: true,
             order
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Delete order
+export const deleteOrder = async (req, res, next) => {
+    try {
+        const { orderId } = req.params;
+        const deletedOrder = await Order.findByIdAndDelete(orderId);
+        
+        if (!deletedOrder) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found'
+            });
+        }
+        
+        res.status(200).json({
+            success: true,
+            message: 'Order deleted successfully'
         });
     } catch (error) {
         next(error);

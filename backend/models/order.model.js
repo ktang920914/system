@@ -24,29 +24,33 @@ const orderSchema = new mongoose.Schema({
             type: Number,
             required: true,
         },
-        orderproducttax: Number // 添加税率字段
+        orderproducttax: Number
     }],
     ordercomboitem: [{
         comboproductitem: String,
         comboproductquantity: { type: Number, default: 1 },
         comboproductprice: { type: Number, required: true },
-        comboproducttax: Number, // 添加税率字段
+        comboproducttax: Number,
         combochooseitems: [{
           combochooseitemname: String,
           combochooseitemquantity: { type: Number, default: 1 }
         }]
-      }],
+    }],
     subtotal: {
         type: Number,
         default: 0,
     },
+    taxableAmount: {
+        type: Number,
+        default: 0
+    },
+    taxtotal: {
+        type: Number,
+        default: 0
+    },
     ordertotal: {
         type: Number,
         default: 0,
-    },
-    taxtotal:{
-        type:Number,
-        default: 0
     },
     status: {
         type: String,
