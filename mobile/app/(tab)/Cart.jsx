@@ -255,11 +255,10 @@ export default function Cart() {
         <Text className="text-base">{isCombo ? `${item.comboproductitem} (Combo)` : item.orderproductname}</Text>
         <Text className="text-sm text-gray-500">
           x{isCombo ? item.comboproductquantity : item.orderproductquantity} • 
-          {isCombo ? item.comboproducttax : item.orderproducttax > 0 ? (
-            <Text> Tax: {isCombo ? item.comboproducttax : item.orderproducttax}%</Text>
-          ) : (
-            <Text> No Tax</Text>
-          )}
+          {isCombo ? 
+            (item.comboproducttax > 0 ? ` Tax: ${item.comboproducttax}%` : ' No Tax') : 
+            (item.orderproducttax > 0 ? ` Tax: ${item.orderproducttax}%` : ' No Tax')
+          }
         </Text>
       </View>
       <View className="flex-row items-center">
@@ -280,84 +279,90 @@ export default function Cart() {
   );
 
   const renderCurrentOrder = () => (
-    <ScrollView 
-      className="flex-1 bg-white p-4"
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={fetchData}
-        />
-      }
-    >
-      {/* Current Order Section */}
-      <View className="mb-5 border-b border-gray-200 pb-2.5">
-        <Text className="text-2xl font-bold text-center">Order Bill</Text>
-        <Text className="text-lg text-center mt-1 text-gray-600">Table: {tableName}</Text>
-      </View>
-
-      <View className="mb-5">
-        <View className="flex-row justify-between items-center mb-3">
-          <Text className="text-lg font-bold">Order #{currentOrder.ordernumber || ''}</Text>
-          <Text className={`text-sm ${
-            currentOrder.status === 'completed' ? 'text-green-600' : 
-            currentOrder.status === 'cancelled' ? 'text-red-600' : 'text-blue-600'
-          }`}>
-            {currentOrder.status}
+    <View className="flex-1">
+      {/* Main scrollable content */}
+      <ScrollView 
+        className="flex-1 bg-white p-4"
+        contentContainerStyle={{ paddingBottom: 100 }} // Add extra padding at bottom
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={fetchData}
+          />
+        }
+      >
+        {/* Current Order Section */}
+        <View className="mb-5 border-b border-gray-200 pb-2.5">
+          <Text className="text-2xl font-bold text-center">Order Bill</Text>
+          <Text className="text-lg text-center mt-1 text-gray-600">Table: {tableName}</Text>
+        </View>
+  
+        <View className="mb-5">
+          <View className="flex-row justify-between items-center mb-3">
+            <Text className="text-lg font-bold">Order #{currentOrder.ordernumber || ''}</Text>
+            <Text className={`text-sm ${
+              currentOrder.status === 'completed' ? 'text-green-600' : 
+              currentOrder.status === 'cancelled' ? 'text-red-600' : 'text-blue-600'
+            }`}>
+              {currentOrder.status}
+            </Text>
+          </View>
+          
+          <Text className="text-gray-500 mb-2.5">
+            {new Date(currentOrder.updatedAt || currentOrder.createdAt).toLocaleString()}
           </Text>
         </View>
-        
-        <Text className="text-gray-500 mb-2.5">
-          {new Date(currentOrder.updatedAt || currentOrder.createdAt).toLocaleString()}
-        </Text>
-      </View>
-
-      <View className="mb-5">
-        <Text className="text-lg font-bold mb-2.5">Items:</Text>
-        {currentOrder.items?.map((item, index) => renderOrderItem(item, false, index))}
-        {currentOrder.comboItems?.map((combo, index) => renderOrderItem(combo, true, index))}
-      </View>
-
-      <View className="mt-5 border-t border-gray-200 pt-2.5">
-        <View className="flex-row justify-between mb-2">
-          <Text className="text-base">Subtotal:</Text>
-          <Text className="text-base font-bold">RM {subtotal.toFixed(2)}</Text>
+  
+        <View className="mb-5">
+          <Text className="text-lg font-bold mb-2.5">Items:</Text>
+          {currentOrder.items?.map((item, index) => renderOrderItem(item, false, index))}
+          {currentOrder.comboItems?.map((combo, index) => renderOrderItem(combo, true, index))}
         </View>
-        <View className="flex-row justify-between mb-2">
-          <Text className="text-base">Non-Taxable Amount:</Text>
-          <Text className="text-base">RM {nonTaxableAmount.toFixed(2)}</Text>
+  
+        <View className="mt-5 border-t border-gray-200 pt-2.5">
+          <View className="flex-row justify-between mb-2">
+            <Text className="text-base">Subtotal:</Text>
+            <Text className="text-base font-bold">RM {subtotal.toFixed(2)}</Text>
+          </View>
+          <View className="flex-row justify-between mb-2">
+            <Text className="text-base">Non-Taxable Amount:</Text>
+            <Text className="text-base">RM {nonTaxableAmount.toFixed(2)}</Text>
+          </View>
+          <View className="flex-row justify-between mb-2">
+            <Text className="text-base">Taxable Amount:</Text>
+            <Text className="text-base">RM {taxableAmount.toFixed(2)}</Text>
+          </View>
+          <View className="flex-row justify-between mb-2">
+            <Text className="text-base">Tax:</Text>
+            <Text className="text-base font-bold">RM {taxAmount.toFixed(2)}</Text>
+          </View>
+          <View className="flex-row justify-between mb-2 mt-2.5 pt-2.5 border-t border-gray-200">
+            <Text className="text-lg font-bold">Total:</Text>
+            <Text className="text-lg font-bold text-teal-700">RM {totalAmount.toFixed(2)}</Text>
+          </View>
         </View>
-        <View className="flex-row justify-between mb-2">
-          <Text className="text-base">Taxable Amount:</Text>
-          <Text className="text-base">RM {taxableAmount.toFixed(2)}</Text>
-        </View>
-        <View className="flex-row justify-between mb-2">
-          <Text className="text-base">Tax:</Text>
-          <Text className="text-base font-bold">RM {taxAmount.toFixed(2)}</Text>
-        </View>
-        <View className="flex-row justify-between mb-2 mt-2.5 pt-2.5 border-t border-gray-200">
-          <Text className="text-lg font-bold">Total:</Text>
-          <Text className="text-lg font-bold text-teal-700">RM {totalAmount.toFixed(2)}</Text>
-        </View>
-      </View>
-
-      {/* Action Buttons */}
+      </ScrollView>
+  
+      {/* Fixed buttons at bottom */}
       {currentOrder.status !== 'completed' && (
-        <View className="mt-5 flex-row justify-between">
-          <TouchableOpacity 
-            onPress={handleAddMoreItems}
-            className="bg-blue-500 px-4 py-2 rounded flex-1 mr-2"
-          >
-            <Text className="text-white text-center">Add More Items</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={handlePay}
-            className="bg-green-500 px-4 py-2 rounded flex-1 ml-2"
-          >
-            <Text className="text-white text-center">Pay Now</Text>
-          </TouchableOpacity>
+        <View className="absolute bottom-0 left-0 right-0 bg-white p-4 border-t border-gray-200">
+          <View className="flex-row justify-between">
+            <TouchableOpacity 
+              onPress={handleAddMoreItems}
+              className="bg-blue-500 px-4 py-3 rounded flex-1 mr-2"
+            >
+              <Text className="text-white text-center font-medium">Add More Items</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={handlePay}
+              className="bg-green-500 px-4 py-3 rounded flex-1 ml-2"
+            >
+              <Text className="text-white text-center font-medium">Pay Now</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
-    </ScrollView>
+    </View>
   );
 
   const renderAllOrders = () => (
