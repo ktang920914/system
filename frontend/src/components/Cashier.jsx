@@ -119,96 +119,103 @@ const Cashier = () => {
     }
   };
 
-  // Enhanced payment handling with complete validation
-  const handleCheckPayment = async (tableId, ordernumber) => {
-    setIsProcessing(true);
-    try {
-      // First fetch all orders for this table
-      const orderRes = await fetch(`/api/order/get-orders-by-table/${tableId}`);
-      if (!orderRes.ok) {
-        throw new Error(`Failed to fetch orders: ${orderRes.status}`);
-      }
-      
-      const orderData = await orderRes.json();
-      console.log('All orders for table:', orderData);
+  // Enhanced handleCheckPayment function in cashier.jsx
+const handleCheckPayment = async (tableId, ordernumber) => {
+  setIsProcessing(true);
+  try {
+    // First fetch all orders for this table
+    const orderRes = await fetch(`/api/order/get-orders-by-table/${tableId}`);
+    if (!orderRes.ok) {
+      throw new Error(`Failed to fetch orders: ${orderRes.status}`);
+    }
+    
+    const orderData = await orderRes.json();
+    console.log('All orders for table:', orderData);
 
-      // Find the specific order we want to process
-      const order = orderData.orders.find(o => o.ordernumber === ordernumber);
-      if (!order) {
-        throw new Error('Order not found');
-      }
+    // Find the specific order we want to process
+    const order = orderData.orders.find(o => o.ordernumber === ordernumber);
+    if (!order) {
+      throw new Error('Order not found');
+    }
 
-      // Check if order is already completed
-      if (order.status === 'completed') {
-        throw new Error('This order has already been paid');
-      }
+    // Check if order is already completed
+    if (order.status === 'completed') {
+      throw new Error('This order has already been paid');
+    }
 
-      // Calculate totals from scratch
-      const calculateTotals = (items, isCombo = false) => {
-        let subtotal = 0;
-        let taxtotal = 0;
+    // Enhanced calculateTotals function to properly handle combo items
+    const calculateTotals = (items, isCombo = false) => {
+      let subtotal = 0;
+      let taxtotal = 0;
 
-        items.forEach(item => {
-          const quantity = Math.max(0, Number(item.orderproductquantity) || 0);
-          const price = Math.max(0, Number(item.orderproductprice) || 0);
-          const taxRate = Math.max(0, Math.min(100, 
-              Number(isCombo ? item.comboproducttax : item.orderproducttax) || 0));
+      items.forEach(item => {
+        const quantity = Math.max(0, Number(isCombo ? item.comboproductquantity : item.orderproductquantity) || 0);
+        const price = Math.max(0, Number(isCombo ? item.comboproductprice : item.orderproductprice) || 0);
+        const taxRate = Math.max(0, Math.min(100, 
+            Number(isCombo ? item.comboproducttax : item.orderproducttax) || 0));
 
-          const itemTotal = price * quantity;
-          subtotal += itemTotal;
-          taxtotal += itemTotal * (taxRate / 100);
-        });
-
-        return { subtotal, taxtotal };
-      };
-
-      // Calculate regular items
-      const regularItems = order.orderitems || [];
-      const regularTotals = calculateTotals(regularItems);
-
-      // Calculate combo items
-      const comboItems = order.ordercomboitem || [];
-      const comboTotals = calculateTotals(comboItems, true);
-
-      // Sum all amounts
-      const subtotal = regularTotals.subtotal + comboTotals.subtotal;
-      const taxtotal = regularTotals.taxtotal + comboTotals.taxtotal;
-      const ordertotal = subtotal + taxtotal;
-
-      console.log('Final calculated totals:', { subtotal, taxtotal, ordertotal });
-
-      // Validate calculations
-      if (isNaN(subtotal)) throw new Error('Invalid subtotal calculation');
-      if (isNaN(taxtotal)) throw new Error('Invalid tax calculation');
-      if (isNaN(ordertotal)) throw new Error('Invalid total calculation');
-
-      // Update order with new totals and mark as completed
-      const updateRes = await fetch(`/api/order/update-order-totals/${ordernumber}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subtotal,
-          taxAmount: taxtotal,
-          ordertotal,
-          status: 'completed'
-        })
+        const itemTotal = price * quantity;
+        subtotal += itemTotal;
+        taxtotal += itemTotal * (taxRate / 100);
       });
 
-      if (!updateRes.ok) {
-        const errorData = await updateRes.json();
-        throw new Error(errorData.message || 'Failed to update order');
-      }
+      return { subtotal, taxtotal };
+    };
 
-      // Refresh data
-      await Promise.all([fetchOpenTables(), fetchTableOrders()]);
-      alert('Payment processed successfully!');
-    } catch (error) {
-      console.error('Payment error:', error);
-      alert(`Payment failed: ${error.message}`);
-    } finally {
-      setIsProcessing(false);
+    // Calculate regular items
+    const regularItems = order.orderitems || [];
+    const regularTotals = calculateTotals(regularItems);
+
+    // Calculate combo items - ensure we're using the correct property names
+    const comboItems = order.ordercomboitem || [];
+    const comboTotals = calculateTotals(comboItems, true);
+
+    // Sum all amounts
+    const subtotal = regularTotals.subtotal + comboTotals.subtotal;
+    const taxtotal = regularTotals.taxtotal + comboTotals.taxtotal;
+    const ordertotal = subtotal + taxtotal;
+
+    console.log('Final calculated totals:', { 
+      subtotal, 
+      taxtotal, 
+      ordertotal,
+      regularItems,
+      comboItems 
+    });
+
+    // Validate calculations
+    if (isNaN(subtotal)) throw new Error('Invalid subtotal calculation');
+    if (isNaN(taxtotal)) throw new Error('Invalid tax calculation');
+    if (isNaN(ordertotal)) throw new Error('Invalid total calculation');
+    if (subtotal <= 0) throw new Error('Subtotal must be greater than 0');
+
+    // Update order with new totals and mark as completed
+    const updateRes = await fetch(`/api/order/update-order-totals/${ordernumber}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subtotal,
+        taxAmount: taxtotal,
+        ordertotal,
+        status: 'completed'
+      })
+    });
+
+    if (!updateRes.ok) {
+      const errorData = await updateRes.json();
+      throw new Error(errorData.message || 'Failed to update order');
     }
-  };
+
+    // Refresh data
+    await Promise.all([fetchOpenTables(), fetchTableOrders()]);
+    alert('Payment processed successfully!');
+  } catch (error) {
+    console.error('Payment error:', error);
+    alert(`Payment failed: ${error.message}`);
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   // Set up polling for real-time updates
   useEffect(() => {
