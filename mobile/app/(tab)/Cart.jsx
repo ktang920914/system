@@ -272,36 +272,48 @@ export default function Cart() {
   };
 
   const renderOrderItem = (item, isCombo = false, index) => {
-    // Get chosen items for combo with better handling
+    // Get chosen items for combo with quantity handling
     const getChosenItems = () => {
       if (!isCombo || !item.combochooseitems) return [];
       
-      return item.combochooseitems.map(choice => {
-        if (typeof choice === 'string') return choice;
+      // First, count occurrences of each item
+      const itemCounts = {};
+      
+      item.combochooseitems.forEach(choice => {
+        let itemName;
         
-        // Check various possible property names
-        if (choice.combochooseitemname) return choice.combochooseitemname;
-        if (choice.productname) return choice.productname;
-        if (choice.name) return choice.name;
-        if (choice.itemName) return choice.itemName;
-        
-        // If it's an object with productId, find the product
-        if (choice.productId) {
-          const product = products.find(p => p._id === choice.productId);
-          return product?.productname || 'Unknown Item';
+        if (typeof choice === 'string') {
+          itemName = choice;
+        } else {
+          // Check various possible property names
+          if (choice.combochooseitemname) itemName = choice.combochooseitemname;
+          else if (choice.productname) itemName = choice.productname;
+          else if (choice.name) itemName = choice.name;
+          else if (choice.itemName) itemName = choice.itemName;
+          // If it's an object with productId, find the product
+          else if (choice.productId) {
+            const product = products.find(p => p._id === choice.productId);
+            itemName = product?.productname || 'Unknown Item';
+          }
+          else itemName = 'Unknown Item';
         }
         
-        return 'Unknown Item';
-      }).filter(Boolean); // Remove any empty values
+        itemCounts[itemName] = (itemCounts[itemName] || 0) + 1;
+      });
+      
+      // Convert to array of strings with quantities
+      return Object.entries(itemCounts).map(([name, count]) => 
+        count > 1 ? `${name} x${count}` : name
+      );
     };
-  
+    
     const chosenItems = getChosenItems();
     const itemName = isCombo ? item.comboproductname || item.comboproductitem : item.orderproductname;
     const quantity = isCombo ? item.comboproductquantity : item.orderproductquantity;
     const price = isCombo ? item.comboproductprice : item.orderproductprice;
     const taxRate = isCombo ? item.comboproducttax : item.orderproducttax;
     const totalPrice = (price || 0) * (quantity || 0);
-
+  
     return (
       <View 
         key={`${isCombo ? 'combo-' : 'item-'}-${index}`}
@@ -315,7 +327,7 @@ export default function Cart() {
             x{quantity} • {taxRate > 0 ? ` Tax: ${taxRate}%` : ' No Tax'}
           </Text>
           
-          {/* Display combo chosen items */}
+          {/* Display combo chosen items with quantities */}
           {isCombo && chosenItems.length > 0 && (
             <View className="mt-1">
               <Text className="text-xs text-gray-500">Includes:</Text>
