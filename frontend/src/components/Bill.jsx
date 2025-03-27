@@ -34,12 +34,12 @@ const Bill = () => {
 
     <Table hoverable className='shadow-md mt-4'>
       <Table.Head>
-          <Table.HeadCell>Date</Table.HeadCell>
           <Table.HeadCell>Order Number</Table.HeadCell>
           <Table.HeadCell>Products</Table.HeadCell>
           <Table.HeadCell>Subtotal</Table.HeadCell>
           <Table.HeadCell>Tax Total</Table.HeadCell>
           <Table.HeadCell>Total</Table.HeadCell>
+          <Table.HeadCell>Payment</Table.HeadCell>
           <Table.HeadCell>Delete</Table.HeadCell>
           <Table.HeadCell><span>Edit</span></Table.HeadCell>
       </Table.Head>
