@@ -50,18 +50,11 @@ const Bill = () => {
                       <Select id="paymenttype" onChange={handleChange} required>
                           <option value='Uncategory'>Select category</option>
                           <option value='CASH'>CASH</option>
-                          <option value='CARD'>CARD</option>
-                          <option value='EWALLET'>EWALLET</option>
-                          <option value='BANK TRANSFER'>BANK TRANSFER</option>
-                      </Select>
-                  </div><div className='mt-4'>
-                      <Label value='Payment Providers/Networks'/>
-                      <Select id="paymenttype" onChange={handleChange} required>
-                          <option value='Uncategory'>Select category</option>
-                          <option value='REGULAR'>CASH</option>
-                          <option value='VIP'>CARD</option>
-                          <option value='VVIP'>EWALLET</option>
-                          <option value='SVIP'>BANK TRANSFER</option>
+                          <option value='VISA'>VISA</option>
+                          <option value='MASTER'>MASTER</option>
+                          <option value='EWALLET-TNG'>EWALLET-TNG</option>
+                          <option value='DUITNOW'>DUITNOW</option>
+                          <option value='BANK-TRANSFER'>BANK-TRANSFER</option>
                       </Select>
                   </div>
                   <Button type='submit'>Submit</Button>
