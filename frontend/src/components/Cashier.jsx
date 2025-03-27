@@ -48,12 +48,9 @@ const Cashier = () => {
       if (res.ok) {
         const ordersMap = {};
         
-        // Process all orders, not just the first one found
         data.orders.forEach(order => {
           if (order.table) {
-            // If we already have an order for this table, check if it's pending
             if (ordersMap[order.table._id]) {
-              // Only overwrite if the new order is pending
               if (order.status !== 'completed') {
                 ordersMap[order.table._id] = {
                   hasOrder: true,
@@ -64,7 +61,6 @@ const Cashier = () => {
                 };
               }
             } else {
-              // First order found for this table
               ordersMap[order.table._id] = {
                 hasOrder: order.status !== 'completed',
                 ordertotal: safeNumber(order.ordertotal, 'ordertotal'),
@@ -127,87 +123,92 @@ const Cashier = () => {
   const handleCheckPayment = async (tableId, ordernumber) => {
     setIsProcessing(true);
     try {
-        // 获取订单详情
-        const orderRes = await fetch(`/api/order/get-order-by-table/${tableId}`);
-        if (!orderRes.ok) {
-            throw new Error(`Failed to fetch order: ${orderRes.status}`);
-        }
-        
-        const orderData = await orderRes.json();
-        console.log('Order data:', orderData);
+      // First fetch all orders for this table
+      const orderRes = await fetch(`/api/order/get-orders-by-table/${tableId}`);
+      if (!orderRes.ok) {
+        throw new Error(`Failed to fetch orders: ${orderRes.status}`);
+      }
+      
+      const orderData = await orderRes.json();
+      console.log('All orders for table:', orderData);
 
-        // 验证订单数据
-        if (!orderData || !orderData.order) {
-            throw new Error('Invalid order data received');
-        }
+      // Find the specific order we want to process
+      const order = orderData.orders.find(o => o.ordernumber === ordernumber);
+      if (!order) {
+        throw new Error('Order not found');
+      }
 
-        const order = orderData.order;
+      // Check if order is already completed
+      if (order.status === 'completed') {
+        throw new Error('This order has already been paid');
+      }
 
-        // 计算小计和税收
-        const calculateTotals = (items, isCombo = false) => {
-            let subtotal = 0;
-            let taxtotal = 0;
+      // Calculate totals from scratch
+      const calculateTotals = (items, isCombo = false) => {
+        let subtotal = 0;
+        let taxtotal = 0;
 
-            items.forEach(item => {
-                const quantity = Math.max(0, Number(item.orderproductquantity) || 0);
-                const price = Math.max(0, Number(item.orderproductprice) || 0);
-                const taxRate = Math.max(0, Math.min(100, 
-                    Number(isCombo ? item.comboproducttax : item.orderproducttax) || 0));
+        items.forEach(item => {
+          const quantity = Math.max(0, Number(item.orderproductquantity) || 0);
+          const price = Math.max(0, Number(item.orderproductprice) || 0);
+          const taxRate = Math.max(0, Math.min(100, 
+              Number(isCombo ? item.comboproducttax : item.orderproducttax) || 0));
 
-                const itemTotal = price * quantity;
-                subtotal += itemTotal;
-                taxtotal += itemTotal * (taxRate / 100);
-            });
-
-            return { subtotal, taxtotal };
-        };
-
-        // 计算常规商品
-        const regularItems = order.orderitems || [];
-        const regularTotals = calculateTotals(regularItems);
-
-        // 计算套餐商品
-        const comboItems = order.ordercomboitem || [];
-        const comboTotals = calculateTotals(comboItems, true);
-
-        // 汇总所有金额
-        const subtotal = regularTotals.subtotal + comboTotals.subtotal;
-        const taxtotal = regularTotals.taxtotal + comboTotals.taxtotal;
-        const ordertotal = subtotal + taxtotal;
-
-        console.log('Calculated totals:', { subtotal, taxtotal, ordertotal });
-
-        // 验证计算结果
-        if (isNaN(subtotal)) throw new Error('Invalid subtotal calculation');
-        if (isNaN(taxtotal)) throw new Error('Invalid tax calculation');
-        if (isNaN(ordertotal)) throw new Error('Invalid total calculation');
-
-        // 更新订单
-        const updateRes = await fetch(`/api/order/update-order-totals/${ordernumber}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                subtotal,
-                taxAmount: taxtotal,
-                status: 'completed'
-            })
+          const itemTotal = price * quantity;
+          subtotal += itemTotal;
+          taxtotal += itemTotal * (taxRate / 100);
         });
 
-        if (!updateRes.ok) {
-            const errorData = await updateRes.json();
-            throw new Error(errorData.message || 'Failed to update order');
-        }
+        return { subtotal, taxtotal };
+      };
 
-        // 刷新数据
-        await Promise.all([fetchOpenTables(), fetchTableOrders()]);
-        alert('Payment processed successfully!');
+      // Calculate regular items
+      const regularItems = order.orderitems || [];
+      const regularTotals = calculateTotals(regularItems);
+
+      // Calculate combo items
+      const comboItems = order.ordercomboitem || [];
+      const comboTotals = calculateTotals(comboItems, true);
+
+      // Sum all amounts
+      const subtotal = regularTotals.subtotal + comboTotals.subtotal;
+      const taxtotal = regularTotals.taxtotal + comboTotals.taxtotal;
+      const ordertotal = subtotal + taxtotal;
+
+      console.log('Final calculated totals:', { subtotal, taxtotal, ordertotal });
+
+      // Validate calculations
+      if (isNaN(subtotal)) throw new Error('Invalid subtotal calculation');
+      if (isNaN(taxtotal)) throw new Error('Invalid tax calculation');
+      if (isNaN(ordertotal)) throw new Error('Invalid total calculation');
+
+      // Update order with new totals and mark as completed
+      const updateRes = await fetch(`/api/order/update-order-totals/${ordernumber}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subtotal,
+          taxAmount: taxtotal,
+          ordertotal,
+          status: 'completed'
+        })
+      });
+
+      if (!updateRes.ok) {
+        const errorData = await updateRes.json();
+        throw new Error(errorData.message || 'Failed to update order');
+      }
+
+      // Refresh data
+      await Promise.all([fetchOpenTables(), fetchTableOrders()]);
+      alert('Payment processed successfully!');
     } catch (error) {
-        console.error('Payment error:', error);
-        alert(`Payment failed: ${error.message}`);
+      console.error('Payment error:', error);
+      alert(`Payment failed: ${error.message}`);
     } finally {
-        setIsProcessing(false);
+      setIsProcessing(false);
     }
-};
+  };
 
   // Set up polling for real-time updates
   useEffect(() => {
@@ -241,7 +242,6 @@ const Cashier = () => {
     const orderInfo = tableOrders[tableId];
     if (!orderInfo) return 'bg-yellow-200'; // No order info (default)
     
-    // Check if there are any pending orders for this table
     if (orderInfo.hasOrder && orderInfo.status !== 'completed') {
       return 'bg-red-200';
     }

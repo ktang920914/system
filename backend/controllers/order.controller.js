@@ -324,3 +324,20 @@ export const deleteOrder = async (req, res, next) => {
         next(error);
     }
 };
+
+// Get all orders for a table (both completed and pending)
+export const getOrdersByTable = async (req, res, next) => {
+    try {
+      const { tableId } = req.params;
+      const orders = await Order.find({ table: tableId })
+        .sort({ createdAt: -1 })
+        .populate('table');
+      
+      res.status(200).json({
+        success: true,
+        orders
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
