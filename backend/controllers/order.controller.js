@@ -103,7 +103,7 @@ export const createOrder = async (req, res, next) => {
 
 export const getOrders = async (req, res, next) => {
     try {
-        const orders = await Order.find().populate('table');
+        const orders = await Order.find().populate('table').sort({ createdAt: -1 });
         res.status(200).json({
             success: true,
             orders

@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 
@@ -6,86 +6,93 @@ export default function Cart() {
   const params = useLocalSearchParams();
   const { tableName, orderDetails, tableId } = params || {};
   
-  const [parsedOrderDetails, setParsedOrderDetails] = useState({
+  const [currentOrder, setCurrentOrder] = useState({
     ordernumber: '',
     items: [],
     comboItems: [],
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    status: 'pending'
   });
 
+  const [allOrders, setAllOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Fetch all products from the database
+  // Fetch all necessary data
+  const fetchData = async () => {
+    try {
+      setRefreshing(true);
+      await Promise.all([fetchProducts(), fetchOrders()]);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      Alert.alert('Error', 'Failed to load data');
+    } finally {
+      setRefreshing(false);
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await fetch('http://192.168.212.66:3000/api/product/get-products');
-        const data = await response.json();
-        if (response.ok) {
-          setProducts(data);
-        } else {
-          Alert.alert('Error', 'Failed to fetch products');
-        }
-      } catch (error) {
-        console.error('Fetch products error:', error);
-        Alert.alert('Error', 'Failed to connect to server');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
+    fetchData();
   }, []);
 
-  // Parse order details and match with product data
+  const fetchProducts = async () => {
+    const response = await fetch('http://192.168.212.66:3000/api/product/get-products');
+    const data = await response.json();
+    if (response.ok) setProducts(data);
+  };
+
+  const fetchOrders = async () => {
+    const response = await fetch('http://192.168.212.66:3000/api/order/get-orders');
+    const data = await response.json();
+    if (response.ok) setAllOrders(data.orders || []);
+  };
+
+  // Parse and set current order details
   useEffect(() => {
     if (orderDetails && products.length > 0) {
       try {
         const parsed = JSON.parse(orderDetails);
         
-        // Match items with product data to ensure correct tax rates
         const matchedItems = parsed.items?.map(item => {
           const product = products.find(p => p.productname === item.orderproductname);
           return {
             ...item,
-            // Use the product's tax rate if available, otherwise keep the order's tax rate
             orderproducttax: product?.producttax ?? item.orderproducttax
           };
         }) || [];
 
-        // Match combo items with product data
         const matchedComboItems = parsed.comboItems?.map(combo => {
           const product = products.find(p => p.productname === combo.comboproductitem);
           return {
             ...combo,
-            // Use the product's tax rate if available, otherwise keep the order's tax rate
             comboproducttax: product?.producttax ?? combo.comboproducttax
           };
         }) || [];
 
-        const updatedDetails = {
+        setCurrentOrder({
           ordernumber: parsed.ordernumber || '',
           items: matchedItems,
           comboItems: matchedComboItems,
-          createdAt: parsed.createdAt || new Date().toISOString()
-        };
-        
-        setParsedOrderDetails(updatedDetails);
+          createdAt: parsed.createdAt || new Date().toISOString(),
+          status: parsed.status || 'pending'
+        });
       } catch (error) {
         console.error('Error parsing order details:', error);
       }
     }
   }, [orderDetails, products]);
 
+  // Calculation functions
   const calculateSubtotal = () => {
     let subtotal = 0;
     
-    parsedOrderDetails.items?.forEach(item => {
+    currentOrder.items?.forEach(item => {
       subtotal += (item.orderproductprice || 0) * (item.orderproductquantity || 0);
     });
     
-    parsedOrderDetails.comboItems?.forEach(combo => {
+    currentOrder.comboItems?.forEach(combo => {
       subtotal += (combo.comboproductprice || 0) * (combo.comboproductquantity || 0);
     });
     
@@ -96,22 +103,18 @@ export default function Cart() {
     let taxableAmount = 0;
     let taxAmount = 0;
 
-    // Calculate for regular items
-    parsedOrderDetails.items?.forEach(item => {
+    currentOrder.items?.forEach(item => {
       const itemTotal = (item.orderproductprice || 0) * (item.orderproductquantity || 0);
       const itemTaxRate = item.orderproducttax || 0;
-      
       if (itemTaxRate > 0) {
         taxableAmount += itemTotal;
         taxAmount += itemTotal * (itemTaxRate / 100);
       }
     });
 
-    // Calculate for combo items
-    parsedOrderDetails.comboItems?.forEach(combo => {
+    currentOrder.comboItems?.forEach(combo => {
       const comboTotal = (combo.comboproductprice || 0) * (combo.comboproductquantity || 0);
       const comboTaxRate = combo.comboproducttax || 0;
-      
       if (comboTaxRate > 0) {
         taxableAmount += comboTotal;
         taxAmount += comboTotal * (comboTaxRate / 100);
@@ -124,18 +127,14 @@ export default function Cart() {
   const calculateNonTaxableAmount = () => {
     let nonTaxableAmount = 0;
 
-    parsedOrderDetails.items?.forEach(item => {
+    currentOrder.items?.forEach(item => {
       const itemTotal = (item.orderproductprice || 0) * (item.orderproductquantity || 0);
-      if (item.orderproducttax === 0) {
-        nonTaxableAmount += itemTotal;
-      }
+      if (item.orderproducttax === 0) nonTaxableAmount += itemTotal;
     });
     
-    parsedOrderDetails.comboItems?.forEach(combo => {
+    currentOrder.comboItems?.forEach(combo => {
       const comboTotal = (combo.comboproductprice || 0) * (combo.comboproductquantity || 0);
-      if (combo.comboproducttax === 0) {
-        nonTaxableAmount += comboTotal;
-      }
+      if (combo.comboproducttax === 0) nonTaxableAmount += comboTotal;
     });
     
     return nonTaxableAmount;
@@ -146,50 +145,44 @@ export default function Cart() {
   const nonTaxableAmount = calculateNonTaxableAmount();
   const totalAmount = subtotal + taxAmount;
 
+  // Order modification handlers
   const handleDeleteItem = async (itemName, isCombo = false) => {
-    try {
-      if (!parsedOrderDetails?.ordernumber) {
-        Alert.alert('Error', 'No order found');
-        return;
-      }
+    if (currentOrder.status === 'completed') {
+      Alert.alert('Error', 'This order has been paid and cannot be modified');
+      return;
+    }
 
+    try {
       const updatedItems = isCombo 
-        ? parsedOrderDetails.items
-        : parsedOrderDetails.items.filter(item => item.orderproductname !== itemName);
+        ? currentOrder.items
+        : currentOrder.items.filter(item => item.orderproductname !== itemName);
       
       const updatedCombos = isCombo
-        ? parsedOrderDetails.comboItems.filter(combo => combo.comboproductitem !== itemName)
-        : parsedOrderDetails.comboItems;
-      
-      const updateData = {
-        orderitems: updatedItems,
-        ordercomboitem: updatedCombos
-      };
+        ? currentOrder.comboItems.filter(combo => combo.comboproductitem !== itemName)
+        : currentOrder.comboItems;
       
       const response = await fetch(
-        `http://192.168.212.66:3000/api/order/update-order/${parsedOrderDetails.ordernumber}`,
+        `http://192.168.212.66:3000/api/order/update-order/${currentOrder.ordernumber}`,
         {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updateData),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderitems: updatedItems,
+            ordercomboitem: updatedCombos
+          }),
         }
       );
       
-      const result = await response.json();
-      
       if (response.ok) {
-        const updatedDetails = {
-          ...parsedOrderDetails,
+        setCurrentOrder(prev => ({
+          ...prev,
           items: updatedItems,
           comboItems: updatedCombos,
           updatedAt: new Date().toISOString()
-        };
-        
-        setParsedOrderDetails(updatedDetails);
+        }));
         Alert.alert('Success', 'Item removed successfully');
       } else {
+        const result = await response.json();
         Alert.alert('Error', result.message || 'Failed to remove item');
       }
     } catch (error) {
@@ -199,7 +192,10 @@ export default function Cart() {
   };
 
   const handleAddMoreItems = () => {
-    if (!parsedOrderDetails) return;
+    if (currentOrder.status === 'completed') {
+      Alert.alert('Error', 'This order has been paid and cannot be modified');
+      return;
+    }
     
     router.navigate({
       pathname: '/add-order/Order',
@@ -207,63 +203,128 @@ export default function Cart() {
         tableId,
         tableName,
         existingOrder: JSON.stringify({
-          ordernumber: parsedOrderDetails.ordernumber,
-          items: parsedOrderDetails.items,
-          comboItems: parsedOrderDetails.comboItems
+          ordernumber: currentOrder.ordernumber,
+          items: currentOrder.items,
+          comboItems: currentOrder.comboItems
         })
       }
     });
   };
 
-  // 修改 Cart.js 中的 handlePay 函数
-const handlePay = async () => {
-  try {
-      if (!parsedOrderDetails?.ordernumber) {
-          Alert.alert('Error', 'No order found');
-          return;
-      }
-
+  const handlePay = async () => {
+    try {
       const response = await fetch(
-          `http://192.168.212.66:3000/api/order/update-order-totals/${parsedOrderDetails.ordernumber}`,
-          {
-              method: 'PUT',
-              headers: {
-                  'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                  subtotal: subtotal,
-                  taxableAmount: taxableAmount,
-                  taxAmount: taxAmount,
-                  ordertotal: totalAmount,
-                  status: 'completed' // 标记订单为已完成
-              }),
-          }
+        `http://192.168.212.66:3000/api/order/update-order-totals/${currentOrder.ordernumber}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subtotal,
+            taxableAmount,
+            taxAmount,
+            ordertotal: totalAmount,
+            status: 'completed'
+          }),
+        }
       );
-
-      const result = await response.json();
-      
+  
       if (response.ok) {
-          Alert.alert('Success', 'Payment processed successfully');
-          // 导航到支付完成页面或其他操作
+        const result = await response.json();
+        setCurrentOrder(prev => ({ ...prev, status: 'completed' }));
+        Alert.alert('Success', 'Payment processed successfully');
+        fetchOrders(); // Refresh the orders list
       } else {
-          Alert.alert('Error', result.message || 'Payment failed');
+        const result = await response.json();
+        Alert.alert('Error', result.message || 'Payment failed');
       }
-  } catch (error) {
+    } catch (error) {
       console.error('Payment error:', error);
       Alert.alert('Error', 'An error occurred during payment');
-  }
-};
+    }
+  };
+
+  const renderOrderItem = (item, isCombo = false, index) => (
+    <View 
+      key={`${isCombo ? 'combo-' : 'item-'}-${index}`}
+      className={`flex-row justify-between mb-2 pb-2 border-b border-gray-100`}
+    >
+      <View className="flex-1">
+        <Text className="text-base">{isCombo ? `${item.comboproductitem} (Combo)` : item.orderproductname}</Text>
+        <Text className="text-sm text-gray-500">
+          x{isCombo ? item.comboproductquantity : item.orderproductquantity} • 
+          {isCombo ? item.comboproducttax : item.orderproducttax > 0 ? (
+            <Text> Tax: {isCombo ? item.comboproducttax : item.orderproducttax}%</Text>
+          ) : (
+            <Text> No Tax</Text>
+          )}
+        </Text>
+      </View>
+      <View className="flex-row items-center">
+        <Text className="text-base font-bold mr-4">
+          RM {((isCombo ? item.comboproductprice : item.orderproductprice || 0) * 
+              (isCombo ? item.comboproductquantity : item.orderproductquantity || 0)).toFixed(2)}
+        </Text>
+        {currentOrder.status !== 'completed' && (
+          <TouchableOpacity 
+            onPress={() => handleDeleteItem(isCombo ? item.comboproductitem : item.orderproductname, isCombo)}
+            className="bg-red-500 px-2 py-1 rounded"
+          >
+            <Text className="text-white">Delete</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+
+  const renderAllOrders = () => (
+    <View className="mt-5">
+      <Text className="text-lg font-bold mb-2">All Orders:</Text>
+      {allOrders.length === 0 ? (
+        <Text className="text-gray-500">No orders found</Text>
+      ) : (
+        allOrders.map((order) => (
+          <View 
+            key={`order-${order.ordernumber}`}
+            className="mb-4 border border-gray-300 p-3 rounded-lg"
+          >
+            <View className="flex-row justify-between">
+              <Text className="font-bold">Order #{order.ordernumber}</Text>
+              <Text className={`font-bold ${
+                order.status === 'completed' ? 'text-green-600' : 
+                order.status === 'cancelled' ? 'text-red-600' : 'text-blue-600'
+              }`}>
+                {order.status}
+              </Text>
+            </View>
+            <Text className="text-gray-500 text-sm">
+              {new Date(order.createdAt).toLocaleString()}
+            </Text>
+            <Text className="mt-1">Total: RM {order.ordertotal?.toFixed(2) || '0.00'}</Text>
+          </View>
+        ))
+      )}
+    </View>
+  );
 
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center">
-        <Text>Loading bill information...</Text>
+        <ActivityIndicator size="large" />
       </View>
     );
   }
 
   return (
-    <ScrollView className="flex-1 bg-white p-4">
+    <ScrollView 
+      className="flex-1 bg-white p-4"
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={fetchData}
+        />
+      }
+    >
+      {/* Current Order Section */}
       <View className="mb-5 border-b border-gray-200 pb-2.5">
         <Text className="text-2xl font-bold text-center">Order Bill</Text>
         <Text className="text-lg text-center mt-1 text-gray-600">Table: {tableName}</Text>
@@ -271,94 +332,24 @@ const handlePay = async () => {
 
       <View className="mb-5">
         <View className="flex-row justify-between items-center mb-3">
-          <Text className="text-lg font-bold">Order #{parsedOrderDetails?.ordernumber || ''}</Text>
+          <Text className="text-lg font-bold">Order #{currentOrder.ordernumber || ''}</Text>
+          <Text className={`text-sm ${
+            currentOrder.status === 'completed' ? 'text-green-600' : 
+            currentOrder.status === 'cancelled' ? 'text-red-600' : 'text-blue-600'
+          }`}>
+            {currentOrder.status}
+          </Text>
         </View>
         
         <Text className="text-gray-500 mb-2.5">
-          {new Date(parsedOrderDetails?.updatedAt || parsedOrderDetails?.updatedAt || new Date()).toLocaleString()}
+          {new Date(currentOrder.updatedAt || currentOrder.createdAt).toLocaleString()}
         </Text>
       </View>
 
       <View className="mb-5">
         <Text className="text-lg font-bold mb-2.5">Items:</Text>
-        
-        {parsedOrderDetails?.items?.map((item, index) => (
-          <View key={`item-${index}`} className="flex-row justify-between mb-2 pb-2 border-b border-gray-100">
-            <View className="flex-1">
-              <Text className="text-base">{item.orderproductname}</Text>
-              <Text className="text-sm text-gray-500">
-                x{item.orderproductquantity} • 
-                {item.orderproducttax > 0 ? (
-                  <Text> Tax: {item.orderproducttax}% (RM {((item.orderproductprice * item.orderproductquantity * item.orderproducttax / 100).toFixed(2))})</Text>
-                ) : (
-                  <Text> No Tax</Text>
-                )}
-              </Text>
-            </View>
-            <View className="flex-row items-center">
-              <Text className="text-base font-bold mr-4">
-                RM {((item.orderproductprice || 0) * (item.orderproductquantity || 0)).toFixed(2)}
-              </Text>
-              <TouchableOpacity 
-                onPress={() => handleDeleteItem(item.orderproductname)}
-                className="bg-red-500 px-2 py-1 rounded"
-              >
-                <Text className="text-white">Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-
-        {parsedOrderDetails?.comboItems?.map((combo, index) => {
-          const groupedChoices = {};
-          combo.combochooseitems?.forEach(item => {
-            const groupIndex = item.groupIndex || 0;
-            if (!groupedChoices[groupIndex]) {
-              groupedChoices[groupIndex] = [];
-            }
-            groupedChoices[groupIndex].push(item);
-          });
-
-          return (
-            <View key={`combo-${index}`} className="mb-2 pb-2 border-b border-gray-100">
-              <View className="flex-row justify-between">
-                <View className="flex-1">
-                  <Text className="text-base">{combo.comboproductitem} (Combo)</Text>
-                  <Text className="text-sm text-gray-500">
-                    x{combo.comboproductquantity} • 
-                    {combo.comboproducttax > 0 ? (
-                      <Text> Tax: {combo.comboproducttax}% (RM {((combo.comboproductprice * combo.comboproductquantity * combo.comboproducttax / 100).toFixed(2))})</Text>
-                    ) : (
-                      <Text> No Tax</Text>
-                    )}
-                  </Text>
-                </View>
-                <View className="flex-row items-center">
-                  <Text className="text-base font-bold mr-4">
-                    RM {((combo.comboproductprice || 0) * (combo.comboproductquantity || 0)).toFixed(2)}
-                  </Text>
-                  <TouchableOpacity 
-                    onPress={() => handleDeleteItem(combo.comboproductitem, true)}
-                    className="bg-red-500 px-2 py-1 rounded"
-                  >
-                    <Text className="text-white">Delete</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-              
-              {Object.entries(groupedChoices).map(([groupIndex, items]) => (
-                <View key={`group-${groupIndex}`} className="pl-5 mt-1">
-                  <Text className="text-xs text-gray-500">Set {parseInt(groupIndex) + 1}:</Text>
-                  {items.map((item, itemIndex) => (
-                    <Text key={`combo-item-${index}-${itemIndex}`} className="text-sm text-gray-500 ml-2">
-                      • {item.combochooseitemname} (x{item.combochooseitemquantity})
-                    </Text>
-                  ))}
-                </View>
-              ))}
-            </View>
-          );
-        })}
+        {currentOrder.items?.map((item, index) => renderOrderItem(item, false, index))}
+        {currentOrder.comboItems?.map((combo, index) => renderOrderItem(combo, true, index))}
       </View>
 
       <View className="mt-5 border-t border-gray-200 pt-2.5">
@@ -384,20 +375,26 @@ const handlePay = async () => {
         </View>
       </View>
 
-      <View className="mt-5 flex-row justify-between">
-        <TouchableOpacity 
-          onPress={handleAddMoreItems}
-          className="bg-blue-500 px-4 py-2 rounded flex-1 mr-2"
-        >
-          <Text className="text-white text-center">Add More Items</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          onPress={handlePay}
-          className="bg-green-500 px-4 py-2 rounded flex-1 ml-2"
-        >
-          <Text className="text-white text-center">Pay Now</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Action Buttons */}
+      {currentOrder.status !== 'completed' && (
+        <View className="mt-5 flex-row justify-between">
+          <TouchableOpacity 
+            onPress={handleAddMoreItems}
+            className="bg-blue-500 px-4 py-2 rounded flex-1 mr-2"
+          >
+            <Text className="text-white text-center">Add More Items</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={handlePay}
+            className="bg-green-500 px-4 py-2 rounded flex-1 ml-2"
+          >
+            <Text className="text-white text-center">Pay Now</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* All Orders Section */}
+      {renderAllOrders()}
     </ScrollView>
   );
 }
