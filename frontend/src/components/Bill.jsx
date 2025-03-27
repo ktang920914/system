@@ -146,7 +146,7 @@ const Bill = () => {
                   )
               }
               <form onSubmit={handleSubmit}>
-                  <div className='mt-4'>
+                  <div className='mt-4 mb-4'>
                       <Label value='Payment Type'/>
                       <Select id="paymenttype" onChange={handleChange} required>
                           <option value='Uncategory'>Select category</option>
