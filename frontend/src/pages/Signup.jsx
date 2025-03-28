@@ -71,7 +71,7 @@ const Signup = () => {
             <div className='mt-4'>
                 <p className='text-gray-500 text-sm dark:text-gray-200'>Already have an account?
                     <Link to='/'>
-                    <span className='text-blue-500 text-sm cursor-pointer hover:font-semibold'> Sign in
+                    <span className='text-blue-500 text-sm cursor-pointer hover:font-semibold dark:text-blue-400'> Sign in
                     </span>
                     </Link>
                 </p>
