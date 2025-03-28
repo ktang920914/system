@@ -3,7 +3,7 @@ import { Sidebar } from 'flowbite-react';
 import { HiUser, HiArrowSmRight } from 'react-icons/hi';
 import { useLocation } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { signOutSuccess } from '../redux/user/userSlice'
 import { IoMdLock } from "react-icons/io";
 import { IoMdSettings } from "react-icons/io";
@@ -25,11 +25,15 @@ import { PiWarehouse } from "react-icons/pi";
 import { LuBoxes } from "react-icons/lu";
 import { TbReportSearch } from "react-icons/tb";
 import { BsInboxes } from "react-icons/bs";
+import { FaSun } from "react-icons/fa";
+import { FaMoon } from "react-icons/fa";
+import {toggleTheme} from '../redux/theme/themeSlice'
 
 const DashSidebar = () => {
   const location = useLocation();
   const [tab, setTab] = useState('');
   const dispatch = useDispatch()
+  const {theme} = useSelector(state => state.theme)
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -68,7 +72,9 @@ const DashSidebar = () => {
               labelColor='dark'
               as='div'
             >
-              Profile
+              <div className='flex item-center gap-2'>
+              <p>Profile</p> <div className='flex items-center justify-center' onClick={() => dispatch(toggleTheme())}>{theme === 'light' ? <FaSun /> : <FaMoon />}</div>
+              </div>
             </Sidebar.Item>
           </Link>
 
