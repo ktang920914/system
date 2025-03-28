@@ -42,8 +42,8 @@ const Signin = () => {
     }
   return (
     <div className='flex items-center justify-center min-h-screen'>
-        <div className='w-full max-w-md bg-white p-8 rounded-lg shadow-lg'>
-            <h1 className='text-2xl text-gray-500 font-semibold text-center'>Sign in</h1>
+        <div className='w-full max-w-md bg-white dark:bg-slate-600 p-8 rounded-lg shadow-lg'>
+            <h1 className='text-2xl text-gray-500 font-semibold text-center dark:text-gray-200'>Sign in</h1>
 
             {
                 errorMessage && (
@@ -70,7 +70,7 @@ const Signin = () => {
             </form>
 
             <div className='mt-4'>
-                <p className='text-gray-500 text-sm'>Dont have an account?
+                <p className='text-gray-500 text-sm dark:text-gray-200'>Dont have an account?
                     <Link to='/signup'>
                     <span className='text-blue-500 text-sm cursor-pointer hover:font-semibold'> Sign up
                     </span>

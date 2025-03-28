@@ -361,10 +361,10 @@ const ReserveTable = () => {
             <Card
               className={`break-words cursor-pointer ${
                 table.open.status
-                  ? 'bg-yellow-200' // 打开后变黄色
+                  ? 'bg-yellow-200 dark:bg-yellow-200 dark:text-black' // 打开后变黄色
                   : table.reserve.status
-                  ? 'bg-red-200' // 预订后变红色
-                  : 'bg-green-200' // 默认青色
+                  ? 'bg-red-200 dark:bg-red-200 dark:text-black' // 预订后变红色
+                  : 'bg-green-200 dark:bg-green-200 dark:text-black' // 默认青色
               }`}
               onClick={() => {
                 // 如果表格未被禁用且未打开，则触发 handleReserveModal
@@ -386,7 +386,7 @@ const ReserveTable = () => {
                     handleOpenTableModal(table); // 打开 Modal
                   }
                 }}
-                className="cursor-pointer flex justify-center"
+                className="cursor-pointer flex justify-center dark:bg-gray-200"
               >
                 {table.open.status ? 'Close' : 'Open'}
               </Badge>

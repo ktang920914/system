@@ -292,12 +292,12 @@ const Cashier = () => {
   // Get card background color based on order status
   const getCardColor = (tableId) => {
     const orderInfo = tableOrders[tableId];
-    if (!orderInfo) return 'bg-yellow-200';
+    if (!orderInfo) return 'bg-yellow-200 dark:bg-yellow-200 dark:text-black';
     
     if (orderInfo.hasOrder && orderInfo.status !== 'completed') {
-      return 'bg-red-200';
+      return 'bg-red-200 dark:bg-red-200 dark:text-black';
     }
-    return 'bg-yellow-200';
+    return 'bg-yellow-200 dark:bg-yellow-200 dark:text-black';
   };
 
   // Get amount text color based on minimum spent

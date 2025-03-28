@@ -362,7 +362,7 @@ const Bill = () => {
                       key={index} 
                       className={`flex ${item.isChooseItem ? 'ml-4 text-sm text-gray-600' : ''}`}
                     >
-                      <span className="flex-1">
+                      <span className="flex-1 dark:text-gray-200">
                         {item.isChooseItem && '- '}
                         {item.name} × {item.quantity}
                       </span>
