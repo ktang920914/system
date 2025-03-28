@@ -23,55 +23,66 @@ export default function Cart() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('current');
 
-  useEffect(() => {
-    // Don't set up polling for completed orders
-    if (currentOrder.status === 'completed') return;
-  
-    // Initial fetch
-    fetchData();
-  
-    // Set up polling every 10 seconds
-    const intervalId = setInterval(() => {
-      // Only refresh if the order is still active
-      if (currentOrder.status !== 'completed') {
-        fetchData();
-      }
-    }, 10000);
-  
-    // Clean up the interval on component unmount
-    return () => clearInterval(intervalId);
-  }, [currentOrder.status]); // Now depends on order status
+  // 修改useEffect部分
+useEffect(() => {
+  // 初始获取数据
+  fetchData();
 
-  const fetchData = async () => {
-    try {
-      setRefreshing(true);
-      await Promise.all([fetchProducts(), fetchOrders()]);
+  // 如果订单已完成，不设置轮询
+  if (currentOrder.status === 'completed') return;
+
+  // 设置轮询
+  const intervalId = setInterval(fetchData, 10000);
+
+  // 清理函数
+  return () => clearInterval(intervalId);
+}, [currentOrder.status]); // 依赖当前订单状态
+
+  // 修改fetchData函数
+const fetchData = async () => {
+  try {
+    setRefreshing(true);
+    
+    // 并行获取产品和订单数据
+    await Promise.all([fetchProducts(), fetchOrders()]);
+    
+    // 如果有订单号，获取最新订单详情
+    if (currentOrder.ordernumber) {
+      const response = await fetch(
+        `http://192.168.212.66:3000/api/order/get-order/${currentOrder.ordernumber}`
+      );
       
-      if (currentOrder.ordernumber) {
-        const response = await fetch(
-          `http://192.168.212.66:3000/api/order/get-order/${currentOrder.ordernumber}`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setCurrentOrder({
-            ordernumber: data.order.ordernumber,
-            items: data.order.orderitems || [],
-            comboItems: data.order.ordercomboitem || [],
-            createdAt: data.order.createdAt,
-            status: data.order.status,
-            updatedAt: data.order.updatedAt,
-            table: data.order.table?.tablename || tableName || ''
+      if (response.ok) {
+        const data = await response.json();
+        const updatedOrder = data.order;
+        
+        // 更新当前订单状态
+        setCurrentOrder(prev => ({
+          ...prev,
+          items: updatedOrder.orderitems || [],
+          comboItems: updatedOrder.ordercomboitem || [],
+          status: updatedOrder.status,
+          updatedAt: updatedOrder.updatedAt,
+          table: updatedOrder.table?.tablename || tableName || ''
+        }));
+        
+        // 如果订单状态变为completed，更新路由参数
+        if (updatedOrder.status === 'completed') {
+          router.setParams({ 
+            tableName: updatedOrder.table?.tablename || tableName,
+            tableId,
+            orderDetails: undefined
           });
         }
       }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      Alert.alert('Error', 'Failed to load data');
-    } finally {
-      setRefreshing(false);
-      setLoading(false);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  } finally {
+    setRefreshing(false);
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchData();
@@ -297,51 +308,52 @@ export default function Cart() {
     });
   };
 
-  const handlePay = async () => {
-    try {
-      const response = await fetch(
-        `http://192.168.212.66:3000/api/order/update-order-totals/${currentOrder.ordernumber}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            subtotal,
-            taxableAmount,
-            taxAmount,
-            ordertotal: totalAmount,
-            status: 'completed'
-          }),
-        }
-      );
-  
-      if (response.ok) {
-        setCurrentOrder({
-          ordernumber: '',
-          items: [],
-          comboItems: [],
-          createdAt: new Date().toISOString(),
-          status: 'pending',
-          table: tableName || ''
-        });
-        
-        router.setParams({ 
-          tableName: currentOrder.table || tableName,
-          tableId,
-          orderDetails: undefined
-        });
-        
-        await fetchData();
-        setActiveTab('history');
-        Alert.alert('Success', 'Payment processed successfully');
-      } else {
-        const result = await response.json();
-        Alert.alert('Error', result.message || 'Payment failed');
+  // 修改handlePay函数
+const handlePay = async () => {
+  try {
+    const response = await fetch(
+      `http://192.168.212.66:3000/api/order/update-order-totals/${currentOrder.ordernumber}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subtotal,
+          taxableAmount,
+          taxAmount,
+          ordertotal: totalAmount,
+          status: 'completed'
+        }),
       }
-    } catch (error) {
-      console.error('Payment error:', error);
-      Alert.alert('Error', 'An error occurred during payment');
+    );
+
+    if (response.ok) {
+      // 强制刷新数据以确保获取最新状态
+      await fetchData();
+      
+      // 更新本地状态
+      setCurrentOrder(prev => ({
+        ...prev,
+        status: 'completed'
+      }));
+      
+      // 更新路由参数
+      router.setParams({ 
+        tableName: currentOrder.table || tableName,
+        tableId,
+        orderDetails: undefined
+      });
+      
+      setActiveTab('history');
+      Alert.alert('Success', 'Payment processed successfully');
+    } else {
+      const result = await response.json();
+      Alert.alert('Error', result.message || 'Payment failed');
     }
-  };
+  } catch (error) {
+    console.error('Payment error:', error);
+    Alert.alert('Error', 'An error occurred during payment');
+  }
+};
 
   const renderOrderItem = (item, isCombo = false, index) => {
     const getChosenItems = () => {
@@ -433,23 +445,19 @@ export default function Cart() {
   };
 
   const renderCurrentOrder = () => {
-    if (!currentOrder.ordernumber) {
+    if (currentOrder.status === 'completed') {
       return (
         <View className="flex-1 justify-center items-center p-4">
-          <MaterialIcons name="shopping-cart" size={60} color="#6b7280" />
+          <MaterialIcons name="check-circle" size={60} color="#10B981" />
           <Text className="text-xl font-bold mt-4 text-center">
-            No active order
+            Order #{currentOrder.ordernumber} Completed
           </Text>
           <Text className="text-gray-500 mt-1 text-center">
-            Start by selecting a table to create an order
+            Total: RM {totalAmount.toFixed(2)}
           </Text>
-          
-          <TouchableOpacity 
-            onPress={() => router.navigate('(tab)/Table')}
-            className="mt-6 bg-blue-500 px-6 py-3 rounded"
-          >
-            <Text className="text-white font-medium">Select Table</Text>
-          </TouchableOpacity>
+          <Text className="text-gray-500 text-center">
+            {new Date(currentOrder.updatedAt).toLocaleString()}
+          </Text>
         </View>
       );
     }
