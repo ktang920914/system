@@ -23,6 +23,25 @@ export default function Cart() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('current');
 
+  useEffect(() => {
+    // Don't set up polling for completed orders
+    if (currentOrder.status === 'completed') return;
+  
+    // Initial fetch
+    fetchData();
+  
+    // Set up polling every 10 seconds
+    const intervalId = setInterval(() => {
+      // Only refresh if the order is still active
+      if (currentOrder.status !== 'completed') {
+        fetchData();
+      }
+    }, 10000);
+  
+    // Clean up the interval on component unmount
+    return () => clearInterval(intervalId);
+  }, [currentOrder.status]); // Now depends on order status
+
   const fetchData = async () => {
     try {
       setRefreshing(true);
