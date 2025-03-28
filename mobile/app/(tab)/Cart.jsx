@@ -1,8 +1,9 @@
-import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, Modal } from 'react-native';
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Tabs } from 'expo-router/tabs';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { Picker } from '@react-native-picker/picker';
 
 export default function Cart() {
   const params = useLocalSearchParams();
@@ -22,6 +23,8 @@ export default function Cart() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('current');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentType, setPaymentType] = useState('CASH');
 
   const fetchProducts = async () => {
     try {
@@ -46,11 +49,8 @@ export default function Cart() {
   const fetchData = useCallback(async () => {
     try {
       setRefreshing(true);
-      
-      // Fetch all data in parallel
       await Promise.all([fetchProducts(), fetchOrders()]);
 
-      // If we have an order number, fetch its latest details
       if (currentOrder.ordernumber) {
         const orderResponse = await fetch(
           `http://192.168.208.66:3000/api/order/get-order/${currentOrder.ordernumber}`
@@ -60,7 +60,6 @@ export default function Cart() {
           const orderData = await orderResponse.json();
           const updatedOrder = orderData.order;
           
-          // Update current order with latest data
           setCurrentOrder(prev => ({
             ...prev,
             items: updatedOrder.orderitems || [],
@@ -70,7 +69,6 @@ export default function Cart() {
             table: updatedOrder.table?.tablename || tableName || ''
           }));
           
-          // Update route params if order is completed
           if (updatedOrder.status === 'completed') {
             router.setParams({ 
               tableName: updatedOrder.table?.tablename || tableName,
@@ -88,28 +86,22 @@ export default function Cart() {
     }
   }, [currentOrder.ordernumber, tableName, tableId]);
 
-  // Enhanced polling effect
   useEffect(() => {
     let intervalId;
     
     const setupPolling = () => {
-      // Initial fetch
       fetchData();
-      
-      // Only setup polling if order is not completed
       if (currentOrder.status !== 'completed') {
-        intervalId = setInterval(fetchData, 10000); // Poll every 10 seconds
+        intervalId = setInterval(fetchData, 10000);
       }
     };
     
     setupPolling();
-    
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
   }, [fetchData, currentOrder.status]);
 
-  // Enhanced order details parsing
   useEffect(() => {
     if (!orderDetails || orderDetails === 'null' || orderDetails === 'undefined') {
       return;
@@ -119,7 +111,6 @@ export default function Cart() {
       const parsed = JSON.parse(orderDetails);
       if (!parsed) return;
 
-      // Only update if order is not completed
       if (parsed.status !== 'completed') {
         const processOrderItems = (items) => {
           return items?.map(item => {
@@ -318,7 +309,13 @@ export default function Cart() {
   };
 
   const handlePay = async () => {
+    setShowPaymentModal(true);
+  };
+
+  const confirmPayment = async () => {
     try {
+      setShowPaymentModal(false);
+      
       const response = await fetch(
         `http://192.168.208.66:3000/api/order/update-order-totals/${currentOrder.ordernumber}`,
         {
@@ -329,22 +326,20 @@ export default function Cart() {
             taxableAmount,
             taxAmount,
             ordertotal: totalAmount,
-            status: 'completed'
+            status: 'completed',
+            paymentType: paymentType
           }),
         }
       );
 
       if (response.ok) {
-        // Force refresh to get latest status
         await fetchData();
         
-        // Update local state
         setCurrentOrder(prev => ({
           ...prev,
           status: 'completed'
         }));
         
-        // Update route params
         router.setParams({ 
           tableName: currentOrder.table || tableName,
           tableId,
@@ -643,6 +638,49 @@ export default function Cart() {
 
   return (
     <View className="flex-1">
+      {/* Payment Type Modal */}
+      <Modal
+        visible={showPaymentModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowPaymentModal(false)}
+      >
+        <View className="flex-1 justify-center items-center bg-black/50">
+          <View className="bg-white p-5 rounded-lg w-80">
+            <Text className="text-lg font-bold mb-4">Select Payment Method</Text>
+            
+            <Picker
+              selectedValue={paymentType}
+              onValueChange={(itemValue) => setPaymentType(itemValue)}
+              style={{ height: 50, width: '100%' }}
+            >
+              <Picker.Item label="Cash" value="CASH" />
+              <Picker.Item label="Visa" value="VISA" />
+              <Picker.Item label="MasterCard" value="MASTER" />
+              <Picker.Item label="Touch 'n Go eWallet" value="EWALLET-TNG" />
+              <Picker.Item label="DuitNow" value="DUITNOW" />
+              <Picker.Item label="Bank Transfer" value="BANK-TRANSFER" />
+              <Picker.Item label="Other" value="OTHER" />
+            </Picker>
+            
+            <View className="flex-row justify-between mt-4">
+              <TouchableOpacity 
+                onPress={() => setShowPaymentModal(false)}
+                className="bg-gray-500 px-4 py-2 rounded"
+              >
+                <Text className="text-white">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={confirmPayment}
+                className="bg-green-500 px-4 py-2 rounded"
+              >
+                <Text className="text-white">Confirm Payment</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <View className="flex-row border-b border-gray-200">
         <TouchableOpacity
           className={`flex-1 py-3 items-center ${activeTab === 'current' ? 'border-b-2 border-blue-500' : ''}`}
