@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Tabs } from 'expo-router/tabs';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -23,71 +23,6 @@ export default function Cart() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('current');
 
-  // 修改useEffect部分
-useEffect(() => {
-  // 初始获取数据
-  fetchData();
-
-  // 如果订单已完成，不设置轮询
-  if (currentOrder.status === 'completed') return;
-
-  // 设置轮询
-  const intervalId = setInterval(fetchData, 10000);
-
-  // 清理函数
-  return () => clearInterval(intervalId);
-}, [currentOrder.status]); // 依赖当前订单状态
-
-  // 修改fetchData函数
-const fetchData = async () => {
-  try {
-    setRefreshing(true);
-    
-    // 并行获取产品和订单数据
-    await Promise.all([fetchProducts(), fetchOrders()]);
-    
-    // 如果有订单号，获取最新订单详情
-    if (currentOrder.ordernumber) {
-      const response = await fetch(
-        `http://192.168.212.66:3000/api/order/get-order/${currentOrder.ordernumber}`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        const updatedOrder = data.order;
-        
-        // 更新当前订单状态
-        setCurrentOrder(prev => ({
-          ...prev,
-          items: updatedOrder.orderitems || [],
-          comboItems: updatedOrder.ordercomboitem || [],
-          status: updatedOrder.status,
-          updatedAt: updatedOrder.updatedAt,
-          table: updatedOrder.table?.tablename || tableName || ''
-        }));
-        
-        // 如果订单状态变为completed，更新路由参数
-        if (updatedOrder.status === 'completed') {
-          router.setParams({ 
-            tableName: updatedOrder.table?.tablename || tableName,
-            tableId,
-            orderDetails: undefined
-          });
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error fetching data:', error);
-  } finally {
-    setRefreshing(false);
-    setLoading(false);
-  }
-};
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchProducts = async () => {
     try {
       const response = await fetch('http://192.168.212.66:3000/api/product/get-products');
@@ -108,6 +43,73 @@ const fetchData = async () => {
     }
   };
 
+  const fetchData = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      
+      // Fetch all data in parallel
+      await Promise.all([fetchProducts(), fetchOrders()]);
+
+      // If we have an order number, fetch its latest details
+      if (currentOrder.ordernumber) {
+        const orderResponse = await fetch(
+          `http://192.168.212.66:3000/api/order/get-order/${currentOrder.ordernumber}`
+        );
+        
+        if (orderResponse.ok) {
+          const orderData = await orderResponse.json();
+          const updatedOrder = orderData.order;
+          
+          // Update current order with latest data
+          setCurrentOrder(prev => ({
+            ...prev,
+            items: updatedOrder.orderitems || [],
+            comboItems: updatedOrder.ordercomboitem || [],
+            status: updatedOrder.status,
+            updatedAt: updatedOrder.updatedAt,
+            table: updatedOrder.table?.tablename || tableName || ''
+          }));
+          
+          // Update route params if order is completed
+          if (updatedOrder.status === 'completed') {
+            router.setParams({ 
+              tableName: updatedOrder.table?.tablename || tableName,
+              tableId,
+              orderDetails: undefined
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setRefreshing(false);
+      setLoading(false);
+    }
+  }, [currentOrder.ordernumber, tableName, tableId]);
+
+  // Enhanced polling effect
+  useEffect(() => {
+    let intervalId;
+    
+    const setupPolling = () => {
+      // Initial fetch
+      fetchData();
+      
+      // Only setup polling if order is not completed
+      if (currentOrder.status !== 'completed') {
+        intervalId = setInterval(fetchData, 10000); // Poll every 10 seconds
+      }
+    };
+    
+    setupPolling();
+    
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [fetchData, currentOrder.status]);
+
+  // Enhanced order details parsing
   useEffect(() => {
     if (!orderDetails || orderDetails === 'null' || orderDetails === 'undefined') {
       return;
@@ -117,65 +119,72 @@ const fetchData = async () => {
       const parsed = JSON.parse(orderDetails);
       if (!parsed) return;
 
+      // Only update if order is not completed
       if (parsed.status !== 'completed') {
-        const matchedItems = parsed.items?.map(item => {
-          const product = products.find(p => p.productname === item.orderproductname);
-          return {
-            ...item,
-            orderproducttax: product?.producttax ?? item.orderproducttax
-          };
-        }) || [];
-    
-        const matchedComboItems = parsed.comboItems?.map(combo => {
-          const product = products.find(p => p.productname === combo.comboproductitem);
-          
-          const processChosenItems = (items) => {
-            if (!items) return [];
-            return items.map(item => {
-              if (typeof item === 'string') return item;
-              
-              if (item.combochooseitemname) return item.combochooseitemname;
-              if (item.productname) return item.productname;
-              if (item.name) return item.name;
-              if (item.itemName) return item.itemName;
-              
-              if (item.productId) {
-                const product = products.find(p => p._id === item.productId);
-                return product?.productname || 'Unknown Item';
-              }
-              
-              return 'Unknown Item';
-            }).filter(Boolean);
-          };
-          
-          return {
-            ...combo,
-            comboproducttax: product?.producttax ?? combo.comboproducttax,
-            chosenItems: processChosenItems(combo.combochooseitems),
-            combochooseitems: combo.combochooseitems
-          };
-        }) || [];
-    
-        setCurrentOrder({
+        const processOrderItems = (items) => {
+          return items?.map(item => {
+            const product = products.find(p => p.productname === item.orderproductname);
+            return {
+              ...item,
+              orderproducttax: product?.producttax ?? item.orderproducttax
+            };
+          }) || [];
+        };
+
+        const processComboItems = (combos) => {
+          return combos?.map(combo => {
+            const product = products.find(p => p.productname === combo.comboproductitem);
+            
+            const processChosenItems = (items) => {
+              if (!items) return [];
+              return items.map(item => {
+                if (typeof item === 'string') return item;
+                
+                if (item.combochooseitemname) return item.combochooseitemname;
+                if (item.productname) return item.productname;
+                if (item.name) return item.name;
+                if (item.itemName) return item.itemName;
+                
+                if (item.productId) {
+                  const product = products.find(p => p._id === item.productId);
+                  return product?.productname || 'Unknown Item';
+                }
+                
+                return 'Unknown Item';
+              }).filter(Boolean);
+            };
+            
+            return {
+              ...combo,
+              comboproducttax: product?.producttax ?? combo.comboproducttax,
+              chosenItems: processChosenItems(combo.combochooseitems),
+              combochooseitems: combo.combochooseitems
+            };
+          }) || [];
+        };
+
+        setCurrentOrder(prev => ({
+          ...prev,
           ordernumber: parsed.ordernumber || '',
-          items: matchedItems,
-          comboItems: matchedComboItems,
+          items: processOrderItems(parsed.items),
+          comboItems: processComboItems(parsed.comboItems),
           createdAt: parsed.createdAt || new Date().toISOString(),
           status: parsed.status || 'pending',
           updatedAt: parsed.updatedAt || new Date().toISOString(),
           table: parsed.table?.tablename || tableName || ''
-        });
+        }));
       }
     } catch (error) {
       console.error('Error parsing order details:', error);
-      setCurrentOrder({
+      setCurrentOrder(prev => ({
+        ...prev,
         ordernumber: '',
         items: [],
         comboItems: [],
         createdAt: new Date().toISOString(),
         status: 'pending',
         table: tableName || ''
-      });
+      }));
     }
   }, [orderDetails, products]);
 
@@ -308,52 +317,51 @@ const fetchData = async () => {
     });
   };
 
-  // 修改handlePay函数
-const handlePay = async () => {
-  try {
-    const response = await fetch(
-      `http://192.168.212.66:3000/api/order/update-order-totals/${currentOrder.ordernumber}`,
-      {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subtotal,
-          taxableAmount,
-          taxAmount,
-          ordertotal: totalAmount,
-          status: 'completed'
-        }),
-      }
-    );
+  const handlePay = async () => {
+    try {
+      const response = await fetch(
+        `http://192.168.212.66:3000/api/order/update-order-totals/${currentOrder.ordernumber}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subtotal,
+            taxableAmount,
+            taxAmount,
+            ordertotal: totalAmount,
+            status: 'completed'
+          }),
+        }
+      );
 
-    if (response.ok) {
-      // 强制刷新数据以确保获取最新状态
-      await fetchData();
-      
-      // 更新本地状态
-      setCurrentOrder(prev => ({
-        ...prev,
-        status: 'completed'
-      }));
-      
-      // 更新路由参数
-      router.setParams({ 
-        tableName: currentOrder.table || tableName,
-        tableId,
-        orderDetails: undefined
-      });
-      
-      setActiveTab('history');
-      Alert.alert('Success', 'Payment processed successfully');
-    } else {
-      const result = await response.json();
-      Alert.alert('Error', result.message || 'Payment failed');
+      if (response.ok) {
+        // Force refresh to get latest status
+        await fetchData();
+        
+        // Update local state
+        setCurrentOrder(prev => ({
+          ...prev,
+          status: 'completed'
+        }));
+        
+        // Update route params
+        router.setParams({ 
+          tableName: currentOrder.table || tableName,
+          tableId,
+          orderDetails: undefined
+        });
+        
+        setActiveTab('history');
+        Alert.alert('Success', 'Payment processed successfully');
+      } else {
+        const result = await response.json();
+        Alert.alert('Error', result.message || 'Payment failed');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      Alert.alert('Error', 'An error occurred during payment');
     }
-  } catch (error) {
-    console.error('Payment error:', error);
-    Alert.alert('Error', 'An error occurred during payment');
-  }
-};
+  };
 
   const renderOrderItem = (item, isCombo = false, index) => {
     const getChosenItems = () => {
