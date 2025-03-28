@@ -423,9 +423,9 @@ const Cashier = () => {
                       <p className="text-xs">
                         Tax: RM{safeNumber(orderInfo.taxtotal, 'order tax').toFixed(2)}
                       </p>
-                      <p className="text-xs text-gray-500">Order #: {orderInfo.ordernumber}</p>
+                      <p className="text-xs text-black font-semibold">Order #: {orderInfo.ordernumber}</p>
                       {orderInfo.paymentType && (
-                        <p className="text-xs">Paid with: {orderInfo.paymentType}</p>
+                        <p className="text-xs">Unpaid with: {orderInfo.paymentType}</p>
                       )}
                     </>
                   )}
