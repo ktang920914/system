@@ -234,11 +234,10 @@ export const updateOrder = async (req, res, next) => {
 export const updateOrderTotals = async (req, res, next) => {
     try {
         const { ordernumber } = req.params;
-        let { subtotal, taxableAmount, taxAmount, ordertotal, status, paymentType } = req.body;
+        let { subtotal,  taxAmount, ordertotal, status, paymentType } = req.body;
         
         // Force conversion to numbers and ensure not NaN
         subtotal = Number(subtotal) || 0;
-        taxableAmount = Number(taxableAmount) || 0;
         taxAmount = Number(taxAmount) || 0;
         ordertotal = Number(ordertotal) || 0;
         
@@ -251,7 +250,6 @@ export const updateOrderTotals = async (req, res, next) => {
             { ordernumber },
             {
                 subtotal,
-                taxableAmount,
                 taxtotal: taxAmount,
                 ordertotal,
                 status: status || 'completed',

@@ -40,10 +40,6 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
-    taxableAmount: {
-        type: Number,
-        default: 0
-    },
     taxtotal: {
         type: Number,
         default: 0

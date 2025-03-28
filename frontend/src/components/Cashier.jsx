@@ -31,6 +31,12 @@ const Cashier = () => {
     return num;
   };
 
+  // Check if table close should be disabled
+  const isTableCloseDisabled = (tableId) => {
+    const orderInfo = tableOrders[tableId];
+    return orderInfo?.hasOrder && orderInfo.status !== 'completed';
+  };
+
   // Fetch all areas
   useEffect(() => {
     const fetchAreas = async () => {
@@ -432,9 +438,9 @@ const Cashier = () => {
                   <Badge
                     color="failure" 
                     size="xs"
-                    className='cursor-pointer'
-                    onClick={() => handleCloseTable(table._id)}
-                    disabled={isProcessing}
+                    className={`cursor-pointer ${isTableCloseDisabled(table._id) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    onClick={isTableCloseDisabled(table._id) ? undefined : () => handleCloseTable(table._id)}
+                    disabled={isProcessing || isTableCloseDisabled(table._id)}
                   >
                     Close Table
                   </Badge>
