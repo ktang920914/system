@@ -29,26 +29,42 @@ const Bill = () => {
     
     // Add regular order items
     if (order.orderitems && order.orderitems.length > 0) {
-      products = order.orderitems.map((item, index) => (
-        `${item.orderproductname} x ${item.orderproductquantity}`
-      ));
+      products = order.orderitems.map((item) => ({
+        name: item.orderproductname,
+        quantity: item.orderproductquantity,
+        price: (item.orderproductprice * item.orderproductquantity).toFixed(2),
+        isCombo: false,
+        isChooseItem: false
+      }));
     }
     
     // Add combo items
     if (order.ordercomboitem && order.ordercomboitem.length > 0) {
-      order.ordercomboitem.forEach((combo, comboIndex) => {
-        products.push(`${combo.comboproductitem} x ${combo.comboproductquantity}`);
+      order.ordercomboitem.forEach((combo) => {
+        products.push({
+          name: combo.comboproductitem,
+          quantity: combo.comboproductquantity,
+          price: (combo.comboproductprice * combo.comboproductquantity).toFixed(2),
+          isCombo: true,
+          isChooseItem: false
+        });
         
         if (combo.combochooseitems && combo.combochooseitems.length > 0) {
-          combo.combochooseitems.forEach((chooseItem, chooseIndex) => {
-            products.push(`  - ${chooseItem.combochooseitemname} x ${chooseItem.combochooseitemquantity}`);
+          combo.combochooseitems.forEach((chooseItem) => {
+            products.push({
+              name: chooseItem.combochooseitemname,
+              quantity: chooseItem.combochooseitemquantity,
+              price: '', // Choose items usually don't have separate prices
+              isCombo: true,
+              isChooseItem: true
+            });
           });
         }
       });
     }
     
-    return products.join('\n');
-  }
+    return products;
+  };
 
   const handleRefundClick = (order) => {
     setSelectedOrder(order);
@@ -255,13 +271,30 @@ const Bill = () => {
           {getPaginationData().map((order) => (
             <Table.Row key={order._id} className="bg-white dark:border-gray-700 dark:bg-gray-800">
               <Table.Cell>
-              {order.table?.tablename || 'N/A'}
+                {order.table?.tablename || 'N/A'}
               </Table.Cell>
               <Table.Cell className='whitespace-nowrap'>
-              {order.ordernumber}
+                {order.ordernumber}
               </Table.Cell>
-              <Table.Cell className="whitespace-pre-line">
-                {formatProducts(order)}
+              <Table.Cell>
+                <div className="space-y-1">
+                  {formatProducts(order).map((item, index) => (
+                    <div 
+                      key={index} 
+                      className={`flex ${item.isChooseItem ? 'ml-4 text-sm text-gray-600' : ''}`}
+                    >
+                      <span className="flex-1">
+                        {item.isChooseItem && '- '}
+                        {item.name} × {item.quantity}
+                      </span>
+                      {item.price && (
+                        <span className="ml-2 font-medium">
+                          RM {item.price}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </Table.Cell>
               <Table.Cell>
                 {order.subtotal?.toFixed(2)}
