@@ -26,8 +26,8 @@ export default function Order() {
         setLoading(true);
         
         const [productsRes, combosRes] = await Promise.all([
-          fetch('http://192.168.212.66:3000/api/product/get-products'),
-          fetch('http://192.168.212.66:3000/api/combo/get-combos')
+          fetch('http://192.168.208.66:3000/api/product/get-products'),
+          fetch('http://192.168.208.66:3000/api/combo/get-combos')
         ]);
         
         const [productsData, combosData] = await Promise.all([
@@ -324,11 +324,11 @@ export default function Order() {
   const getOrderEndpoint = () => {
     return existingOrder 
       ? {
-          endpoint: `http://192.168.212.66:3000/api/order/update-order/${JSON.parse(existingOrder).ordernumber}`,
+          endpoint: `http://192.168.208.66:3000/api/order/update-order/${JSON.parse(existingOrder).ordernumber}`,
           method: 'PUT'
         }
       : {
-          endpoint: 'http://192.168.212.66:3000/api/order/create-order',
+          endpoint: 'http://192.168.208.66:3000/api/order/create-order',
           method: 'POST'
         };
   };

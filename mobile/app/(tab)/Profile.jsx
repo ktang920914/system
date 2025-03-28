@@ -8,7 +8,7 @@ export default function Profile() {
 
     const handleSignOut = async () => {
         try {
-            const res = await fetch('http://192.168.212.66:3000/api/user/signout',{
+            const res = await fetch('http://192.168.208.66:3000/api/user/signout',{
                 method:'POST'
             })
             const data = await res.json()

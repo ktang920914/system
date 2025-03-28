@@ -31,7 +31,7 @@ export default function Table() {
 
   const fetchTables = async () => {
     try {
-      const res = await fetch('http://192.168.212.66:3000/api/table/get-tables');
+      const res = await fetch('http://192.168.208.66:3000/api/table/get-tables');
       const data = await res.json();
       if (res.ok) {
         setTables(data);
@@ -46,7 +46,7 @@ export default function Table() {
 
   const fetchAreas = async () => {
     try {
-      const res = await fetch('http://192.168.212.66:3000/api/area/get-areas');
+      const res = await fetch('http://192.168.208.66:3000/api/area/get-areas');
       const data = await res.json();
       if (res.ok) {
         setAreas(data);
@@ -110,7 +110,7 @@ const renderTableItem = useCallback(({ item }) => {
       try {
           // 检查该桌子是否有未完成的订单
           const response = await fetch(
-              `http://192.168.212.66:3000/api/order/get-order-by-table/${item._id}`
+              `http://192.168.208.66:3000/api/order/get-order-by-table/${item._id}`
           );
           const result = await response.json();
 

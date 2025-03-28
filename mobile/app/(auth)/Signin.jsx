@@ -18,7 +18,7 @@ const Signin = () => {
     const handleSignin = async () => {
         signInStart()
         try {
-            const res = await fetch('http://192.168.212.66:3000/api/auth/signin',{
+            const res = await fetch('http://192.168.208.66:3000/api/auth/signin',{
                 method: 'POST',
                 headers:{'Content-Type':'application/json'},
                 body:JSON.stringify(formData)

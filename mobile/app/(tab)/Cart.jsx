@@ -25,7 +25,7 @@ export default function Cart() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('http://192.168.212.66:3000/api/product/get-products');
+      const response = await fetch('http://192.168.208.66:3000/api/product/get-products');
       const data = await response.json();
       if (response.ok) setProducts(data);
     } catch (error) {
@@ -35,7 +35,7 @@ export default function Cart() {
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('http://192.168.212.66:3000/api/order/get-orders');
+      const response = await fetch('http://192.168.208.66:3000/api/order/get-orders');
       const data = await response.json();
       if (response.ok) setAllOrders(data.orders || []);
     } catch (error) {
@@ -53,7 +53,7 @@ export default function Cart() {
       // If we have an order number, fetch its latest details
       if (currentOrder.ordernumber) {
         const orderResponse = await fetch(
-          `http://192.168.212.66:3000/api/order/get-order/${currentOrder.ordernumber}`
+          `http://192.168.208.66:3000/api/order/get-order/${currentOrder.ordernumber}`
         );
         
         if (orderResponse.ok) {
@@ -265,7 +265,7 @@ export default function Cart() {
       }));
 
       const response = await fetch(
-        `http://192.168.212.66:3000/api/order/update-order/${currentOrder.ordernumber}`,
+        `http://192.168.208.66:3000/api/order/update-order/${currentOrder.ordernumber}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -320,7 +320,7 @@ export default function Cart() {
   const handlePay = async () => {
     try {
       const response = await fetch(
-        `http://192.168.212.66:3000/api/order/update-order-totals/${currentOrder.ordernumber}`,
+        `http://192.168.208.66:3000/api/order/update-order-totals/${currentOrder.ordernumber}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
