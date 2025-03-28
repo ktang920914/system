@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Badge, Button, Label, Modal, Pagination, Select, Table } from 'flowbite-react';
+import * as XLSX from 'xlsx';
 
 const Bill = () => {
   const [orders, setOrders] = useState([]);
@@ -247,17 +248,83 @@ const Bill = () => {
     return orders.slice(startIndex, endIndex);
   };
 
+  const generateExcelReport = () => {
+    // Create an array where each product gets its own row
+    const reportData = orders.flatMap(order => {
+      const baseData = {
+        'Order Number': order.ordernumber,
+        'Table': order.table?.tablename || 'N/A',
+        'Subtotal (RM)': order.subtotal?.toFixed(2),
+        'Tax (RM)': order.taxtotal?.toFixed(2),
+        'Total (RM)': order.ordertotal?.toFixed(2),
+        'Payment Type': order.paymentType || 'N/A',
+        'Status': order.status,
+        'Date': new Date(order.createdAt).toLocaleString()
+      };
+  
+      const products = formatProducts(order);
+      
+      // If no products, return just the order info
+      if (products.length === 0) return [baseData];
+      
+      // Create one row per product
+      return products.map((product, index) => ({
+        ...baseData,
+        'Product Name': (product.isChooseItem ? '  - ' : '') + product.name,
+        'Quantity': product.quantity,
+        'Price (RM)': product.price || '0.00',
+        // Only show order info in the first row for each order
+        ...(index > 0 ? {
+          'Order Number': '',
+          'Table': '',
+          'Subtotal (RM)': '',
+          'Tax (RM)': '',
+          'Total (RM)': '',
+          'Payment Type': '',
+          'Status': '',
+          'Date': ''
+        } : {})
+      }));
+    });
+  
+    // Create a new workbook
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(reportData);
+    
+    // Set column widths (optional)
+    ws['!cols'] = [
+      { width: 15 }, // Order Number
+      { width: 10 }, // Table
+      { width: 25 }, // Product Name
+      { width: 10 }, // Quantity
+      { width: 12 }, // Price
+      { width: 12 }, // Subtotal
+      { width: 10 }, // Tax
+      { width: 12 }, // Total
+      { width: 15 }, // Payment Type
+      { width: 12 }, // Status
+      { width: 20 }  // Date
+    ];
+    
+    // Add the worksheet to the workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Bills Report");
+    
+    // Generate the Excel file and trigger download
+    const date = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `Bills_Report_${date}.xlsx`);
+  };
+
   return (
     <div className='w-full max-w-5xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
       {renderRefundModal()}
       
       <div className='flex items-center justify-between'>
         <h1 className='text-2xl text-gray-500 font-semibold'>Bills</h1>
+        <Button onClick={generateExcelReport}>Report</Button>
       </div>
 
       <Table hoverable className='shadow-md mt-4'>
         <Table.Head>
-          <Table.HeadCell>Table</Table.HeadCell>
           <Table.HeadCell>Order Number</Table.HeadCell>
           <Table.HeadCell>Products</Table.HeadCell>
           <Table.HeadCell>Subtotal (RM)</Table.HeadCell>
@@ -270,11 +337,8 @@ const Bill = () => {
         <Table.Body className="divide-y">
           {getPaginationData().map((order) => (
             <Table.Row key={order._id} className="bg-white dark:border-gray-700 dark:bg-gray-800">
-              <Table.Cell>
-                {order.table?.tablename || 'N/A'}
-              </Table.Cell>
               <Table.Cell className='whitespace-nowrap'>
-                {order.ordernumber}
+              <div className='text-center'>{order.table?.tablename || 'N/A'}</div> {order.ordernumber}
               </Table.Cell>
               <Table.Cell>
                 <div className="space-y-1">
@@ -313,9 +377,12 @@ const Bill = () => {
                   {order.status}
                 </Badge>
               </Table.Cell>
-              <Table.Cell>
-                <Button onClick={() => handleRefundClick(order)}>
+              <Table.Cell className='flex flex-col gap-2'>
+                <Button color='warning' onClick={() => handleRefundClick(order)}>
                   Refund
+                </Button>
+                <Button color='success'>
+                  Print
                 </Button>
               </Table.Cell>
             </Table.Row>
