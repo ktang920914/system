@@ -13,7 +13,8 @@ export default function Cart() {
     items: [],
     comboItems: [],
     createdAt: new Date().toISOString(),
-    status: 'pending'
+    status: 'pending',
+    table: tableName || ''
   });
 
   const [allOrders, setAllOrders] = useState([]);
@@ -27,7 +28,6 @@ export default function Cart() {
       setRefreshing(true);
       await Promise.all([fetchProducts(), fetchOrders()]);
       
-      // If we have an active order number, fetch its latest state
       if (currentOrder.ordernumber) {
         const response = await fetch(
           `http://192.168.212.66:3000/api/order/get-order/${currentOrder.ordernumber}`
@@ -40,7 +40,8 @@ export default function Cart() {
             comboItems: data.order.ordercomboitem || [],
             createdAt: data.order.createdAt,
             status: data.order.status,
-            updatedAt: data.order.updatedAt
+            updatedAt: data.order.updatedAt,
+            table: data.order.table?.tablename || tableName || ''
           });
         }
       }
@@ -131,7 +132,8 @@ export default function Cart() {
           comboItems: matchedComboItems,
           createdAt: parsed.createdAt || new Date().toISOString(),
           status: parsed.status || 'pending',
-          updatedAt: parsed.updatedAt || new Date().toISOString()
+          updatedAt: parsed.updatedAt || new Date().toISOString(),
+          table: parsed.table?.tablename || tableName || ''
         });
       }
     } catch (error) {
@@ -141,7 +143,8 @@ export default function Cart() {
         items: [],
         comboItems: [],
         createdAt: new Date().toISOString(),
-        status: 'pending'
+        status: 'pending',
+        table: tableName || ''
       });
     }
   }, [orderDetails, products]);
@@ -215,7 +218,6 @@ export default function Cart() {
         ? currentOrder.comboItems.filter(combo => combo.comboproductitem !== itemName)
         : currentOrder.comboItems;
       
-      // First, update the local state immediately for better UX
       setCurrentOrder(prev => ({
         ...prev,
         items: updatedItems,
@@ -223,7 +225,6 @@ export default function Cart() {
         updatedAt: new Date().toISOString()
       }));
 
-      // Then send the update to the backend
       const response = await fetch(
         `http://192.168.212.66:3000/api/order/update-order/${currentOrder.ordernumber}`,
         {
@@ -237,23 +238,22 @@ export default function Cart() {
       );
       
       if (!response.ok) {
-        // If the backend update fails, revert the local state
         const result = await response.json();
         Alert.alert('Error', result.message || 'Failed to remove item');
-        fetchData(); // Refresh data from server to sync state
+        fetchData();
       } else {
-        // Success - ensure our local state matches the server
         const updatedOrder = await response.json();
         setCurrentOrder({
           ...updatedOrder.order,
           items: updatedOrder.order.orderitems || [],
-          comboItems: updatedOrder.order.ordercomboitem || []
+          comboItems: updatedOrder.order.ordercomboitem || [],
+          table: updatedOrder.order.table?.tablename || tableName || ''
         });
       }
     } catch (error) {
       console.error('Delete error:', error);
       Alert.alert('Error', 'An error occurred while removing the item');
-      fetchData(); // Refresh data from server on error
+      fetchData();
     }
   };
 
@@ -267,11 +267,12 @@ export default function Cart() {
       pathname: '/add-order/Order',
       params: {
         tableId,
-        tableName,
+        tableName: currentOrder.table || tableName,
         existingOrder: JSON.stringify({
           ordernumber: currentOrder.ordernumber,
           items: currentOrder.items,
-          comboItems: currentOrder.comboItems
+          comboItems: currentOrder.comboItems,
+          table: currentOrder.table || tableName
         })
       }
     });
@@ -300,11 +301,12 @@ export default function Cart() {
           items: [],
           comboItems: [],
           createdAt: new Date().toISOString(),
-          status: 'pending'
+          status: 'pending',
+          table: tableName || ''
         });
         
         router.setParams({ 
-          tableName,
+          tableName: currentOrder.table || tableName,
           tableId,
           orderDetails: undefined
         });
@@ -447,7 +449,9 @@ export default function Cart() {
         >
           <View className="mb-5 border-b border-gray-200 pb-2.5">
             <Text className="text-2xl font-bold text-center">Order Bill</Text>
-            <Text className="text-lg text-center mt-1 text-gray-600">Table: {tableName}</Text>
+            <Text className="text-lg text-center mt-1 text-gray-600">
+              Table: {currentOrder.table || tableName || 'No table assigned'}
+            </Text>
           </View>
     
           <View className="mb-5">
@@ -549,8 +553,22 @@ export default function Cart() {
                 comboItems: order.ordercomboitem || [],
                 createdAt: order.createdAt,
                 status: order.status,
-                updatedAt: order.updatedAt
+                updatedAt: order.updatedAt,
+                table: order.table?.tablename || tableName || ''
               });
+              
+              router.setParams({
+                tableName: order.table?.tablename || tableName,
+                tableId,
+                orderDetails: JSON.stringify({
+                  ordernumber: order.ordernumber,
+                  items: order.orderitems,
+                  comboItems: order.ordercomboitem,
+                  status: order.status,
+                  table: order.table
+                })
+              });
+              
               setActiveTab('current');
             }}
           >
