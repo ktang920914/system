@@ -84,7 +84,8 @@ export const createOrder = async (req, res, next) => {
             ordercomboitem: validatedComboItems,
             subtotal,
             taxtotal,
-            ordertotal
+            ordertotal,
+            paymentType: 'CASH' // Default payment type
         });
         
         await newOrder.save();
@@ -233,7 +234,7 @@ export const updateOrder = async (req, res, next) => {
 export const updateOrderTotals = async (req, res, next) => {
     try {
         const { ordernumber } = req.params;
-        let { subtotal, taxableAmount, taxAmount, ordertotal, status } = req.body;
+        let { subtotal, taxableAmount, taxAmount, ordertotal, status, paymentType } = req.body;
         
         // Force conversion to numbers and ensure not NaN
         subtotal = Number(subtotal) || 0;
@@ -254,6 +255,7 @@ export const updateOrderTotals = async (req, res, next) => {
                 taxtotal: taxAmount,
                 ordertotal,
                 status: status || 'completed',
+                paymentType: paymentType || 'CASH',
                 updatedAt: new Date()
             },
             { new: true }
@@ -340,4 +342,4 @@ export const getOrdersByTable = async (req, res, next) => {
     } catch (error) {
       next(error);
     }
-  };
+};

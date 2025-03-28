@@ -56,6 +56,11 @@ const orderSchema = new mongoose.Schema({
         type: String,
         enum: ['pending', 'completed', 'cancelled'],
         default: 'pending'
+    },
+    paymentType: {
+        type: String,
+        enum: ['CASH', 'VISA', 'MASTER', 'EWALLET-TNG', 'DUITNOW', 'BANK-TRANSFER', 'OTHER'],
+        default: 'CASH'
     }
 }, { timestamps: true });
 

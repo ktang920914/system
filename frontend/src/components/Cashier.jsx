@@ -10,8 +10,12 @@ const Cashier = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMessage, setPaymentMessage] = useState('');
-  const [paymentStatus, setPaymentStatus] = useState(''); // 'success' or 'error'
-  const [sortBy, setSortBy] = useState('default'); // 'default', 'hasOrder', 'noOrder'
+  const [paymentStatus, setPaymentStatus] = useState('');
+  const [sortBy, setSortBy] = useState('default');
+  const [showPaymentTypeModal, setShowPaymentTypeModal] = useState(false);
+  const [currentTable, setCurrentTable] = useState(null);
+  const [currentOrderNumber, setCurrentOrderNumber] = useState('');
+  const [paymentType, setPaymentType] = useState('CASH');
   const ITEMS_PER_PAGE = 7;
 
   const safeNumber = (value, fieldName = '', defaultValue = 0) => {
@@ -60,7 +64,8 @@ const Cashier = () => {
                   ordertotal: safeNumber(order.ordertotal, 'ordertotal'),
                   taxtotal: safeNumber(order.taxtotal, 'taxtotal'),
                   status: order.status,
-                  ordernumber: order.ordernumber
+                  ordernumber: order.ordernumber,
+                  paymentType: order.paymentType
                 };
               }
             } else {
@@ -69,7 +74,8 @@ const Cashier = () => {
                 ordertotal: safeNumber(order.ordertotal, 'ordertotal'),
                 taxtotal: safeNumber(order.taxtotal, 'taxtotal'),
                 status: order.status,
-                ordernumber: order.ordernumber
+                ordernumber: order.ordernumber,
+                paymentType: order.paymentType
               };
             }
           }
@@ -112,16 +118,16 @@ const Cashier = () => {
         return sortedTables.sort((a, b) => {
           const aHasOrder = tableOrders[a._id]?.hasOrder ? 1 : 0;
           const bHasOrder = tableOrders[b._id]?.hasOrder ? 1 : 0;
-          return bHasOrder - aHasOrder; // Tables with orders first
+          return bHasOrder - aHasOrder;
         });
       case 'noOrder':
         return sortedTables.sort((a, b) => {
           const aHasOrder = tableOrders[a._id]?.hasOrder ? 1 : 0;
           const bHasOrder = tableOrders[b._id]?.hasOrder ? 1 : 0;
-          return aHasOrder - bHasOrder; // Tables without orders first
+          return aHasOrder - bHasOrder;
         });
       default:
-        return sortedTables; // Default sorting (likely by table name or ID)
+        return sortedTables;
     }
   };
 
@@ -148,20 +154,25 @@ const Cashier = () => {
     }
   };
 
-  const handleCheckPayment = async (tableId, ordernumber) => {
+  const handleCheckPayment = (tableId, ordernumber) => {
+    setCurrentTable(tableId);
+    setCurrentOrderNumber(ordernumber);
+    setShowPaymentTypeModal(true);
+  };
+
+  const handleSubmitPayment = async () => {
     setIsProcessing(true);
     try {
       // First fetch all orders for this table
-      const orderRes = await fetch(`/api/order/get-orders-by-table/${tableId}`);
+      const orderRes = await fetch(`/api/order/get-orders-by-table/${currentTable}`);
       if (!orderRes.ok) {
         throw new Error(`Failed to fetch orders: ${orderRes.status}`);
       }
       
       const orderData = await orderRes.json();
-      console.log('All orders for table:', orderData);
-
+      
       // Find the specific order we want to process
-      const order = orderData.orders.find(o => o.ordernumber === ordernumber);
+      const order = orderData.orders.find(o => o.ordernumber === currentOrderNumber);
       if (!order) {
         throw new Error('Order not found');
       }
@@ -202,29 +213,16 @@ const Cashier = () => {
       const taxtotal = regularTotals.taxtotal + comboTotals.taxtotal;
       const ordertotal = subtotal + taxtotal;
 
-      console.log('Final calculated totals:', { 
-        subtotal, 
-        taxtotal, 
-        ordertotal,
-        regularItems,
-        comboItems 
-      });
-
-      // Validate calculations
-      if (isNaN(subtotal)) throw new Error('Invalid subtotal calculation');
-      if (isNaN(taxtotal)) throw new Error('Invalid tax calculation');
-      if (isNaN(ordertotal)) throw new Error('Invalid total calculation');
-      if (subtotal <= 0) throw new Error('Subtotal must be greater than 0');
-
-      // Update order with new totals and mark as completed
-      const updateRes = await fetch(`/api/order/update-order-totals/${ordernumber}`, {
+      // Update order with new totals, mark as completed, and set payment type
+      const updateRes = await fetch(`/api/order/update-order-totals/${currentOrderNumber}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           subtotal,
           taxAmount: taxtotal,
           ordertotal,
-          status: 'completed'
+          status: 'completed',
+          paymentType: paymentType
         })
       });
 
@@ -240,6 +238,7 @@ const Cashier = () => {
       setPaymentMessage('Payment processed successfully!');
       setPaymentStatus('success');
       setShowPaymentModal(true);
+      setShowPaymentTypeModal(false);
     } catch (error) {
       console.error('Payment error:', error);
       // Show error modal
@@ -287,7 +286,7 @@ const Cashier = () => {
   // Get card background color based on order status
   const getCardColor = (tableId) => {
     const orderInfo = tableOrders[tableId];
-    if (!orderInfo) return 'bg-yellow-200'; // No order info (default)
+    if (!orderInfo) return 'bg-yellow-200';
     
     if (orderInfo.hasOrder && orderInfo.status !== 'completed') {
       return 'bg-red-200';
@@ -327,6 +326,42 @@ const Cashier = () => {
             Close
           </Button>
         </Modal.Footer>
+      </Modal>
+
+      {/* Payment Type Modal */}
+      <Modal show={showPaymentTypeModal} size="md" onClose={() => setShowPaymentTypeModal(false)}>
+        <Modal.Header>Select Payment Method</Modal.Header>
+        <Modal.Body>
+          <div className="space-y-4">
+            <Select 
+              id="paymentType" 
+              value={paymentType}
+              onChange={(e) => setPaymentType(e.target.value)}
+              className="w-full"
+            >
+              <option value="CASH">Cash</option>
+              <option value="VISA">Visa</option>
+              <option value="MASTER">MasterCard</option>
+              <option value="EWALLET-TNG">Touch 'n Go eWallet</option>
+              <option value="DUITNOW">DuitNow</option>
+              <option value="BANK-TRANSFER">Bank Transfer</option>
+              <option value="OTHER">Other</option>
+            </Select>
+            
+            <div className="flex justify-end gap-2">
+              <Button color="gray" onClick={() => setShowPaymentTypeModal(false)}>
+                Cancel
+              </Button>
+              <Button 
+                color="success" 
+                onClick={handleSubmitPayment}
+                disabled={isProcessing}
+              >
+                {isProcessing ? 'Processing...' : 'Confirm Payment'}
+              </Button>
+            </div>
+          </div>
+        </Modal.Body>
       </Modal>
 
       <div className='flex flex-col md:flex-row items-center justify-between mb-4 gap-4'>
@@ -383,6 +418,9 @@ const Cashier = () => {
                         Tax: RM{safeNumber(orderInfo.taxtotal, 'order tax').toFixed(2)}
                       </p>
                       <p className="text-xs text-gray-500">Order #: {orderInfo.ordernumber}</p>
+                      {orderInfo.paymentType && (
+                        <p className="text-xs">Paid with: {orderInfo.paymentType}</p>
+                      )}
                     </>
                   )}
                   
@@ -408,7 +446,7 @@ const Cashier = () => {
                       onClick={() => handleCheckPayment(table._id, orderInfo.ordernumber)}
                       disabled={isProcessing}
                     >
-                      {isProcessing ? 'Processing...' : 'Check Payment'}
+                      Check Payment
                     </Button>
                   )}
                   
