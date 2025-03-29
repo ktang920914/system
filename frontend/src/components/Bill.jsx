@@ -28,6 +28,16 @@ const Bill = () => {
     fetchOrders();
   }, []);
 
+  // Format date to match order number format (local time)
+  const formatDisplayDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  };
+
   const formatProducts = (order) => {
     let products = [];
     
@@ -78,7 +88,6 @@ const Bill = () => {
         
         if (start && orderDate < start) return false;
         if (end) {
-          // Include the entire end date (up to 23:59:59)
           const endOfDay = new Date(end);
           endOfDay.setHours(23, 59, 59, 999);
           if (orderDate > endOfDay) return false;
@@ -284,7 +293,7 @@ const Bill = () => {
         'Total (RM)': order.ordertotal?.toFixed(2),
         'Payment Type': order.paymentType || 'N/A',
         'Status': order.status,
-        'Date': new Date(order.createdAt).toLocaleString()
+        'Date': formatDisplayDate(order.createdAt)
       };
   
       const products = formatProducts(order);
@@ -312,25 +321,26 @@ const Bill = () => {
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(reportData);
     
+    // Corrected column width definition
     ws['!cols'] = [
-      { width: 15 },
-      { width: 10 },
-      { width: 25 },
-      { width: 10 },
-      { width: 12 },
-      { width: 12 },
-      { width: 10 },
-      { width: 12 },
-      { width: 15 },
-      { width: 12 },
-      { width: 20 }
+      { wch: 15 },  // Order Number
+      { wch: 10 },  // Table
+      { wch: 25 },  // Product Name
+      { wch: 10 },  // Quantity
+      { wch: 12 },  // Price (RM)
+      { wch: 12 },  // Subtotal (RM)
+      { wch: 10 },  // Tax (RM)
+      { wch: 12 },  // Total (RM)
+      { wch: 15 },  // Payment Type
+      { wch: 12 },  // Status
+      { wch: 20 }   // Date
     ];
     
     XLSX.utils.book_append_sheet(wb, ws, "Bills Report");
     
     const date = new Date().toISOString().split('T')[0];
     XLSX.writeFile(wb, `Bills_Report_${date}.xlsx`);
-  };
+};
 
   const clearDateFilters = () => {
     setStartDate('');
@@ -345,15 +355,15 @@ const Bill = () => {
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
 
   return (
-    <div className='w-full max-w-5xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
+    <div className='w-full max-w-6xl table-auto overflow-x-scroll md:mx-auto p-3 scrollbar scrollbar-track-slate-100 scrollbar-thumb-slate-300'>
       {renderRefundModal()}
       
       <div className='flex items-center justify-between'>
         <h1 className='text-2xl text-gray-500 font-semibold sm:block hidden'>Bills</h1>
         <div className='flex items-center gap-2'>
-        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <div className='flex items-center gap-1'>
-              <Label htmlFor="start-date" value="Start Date" />
+              <Label htmlFor="start-date" value="Start" />
               <TextInput
                 id="start-date"
                 type="date"
@@ -362,7 +372,7 @@ const Bill = () => {
               />
             </div>
             <div className='flex items-center gap-1'>
-              <Label htmlFor="end-date" value="End Date" />
+              <Label htmlFor="end-date" value="End" />
               <TextInput
                 id="end-date"
                 type="date"
@@ -370,12 +380,12 @@ const Bill = () => {
                 onChange={(e) => setEndDate(e.target.value)}
                 min={startDate}
               />
-            </div>
-            {(startDate || endDate) && (
-              <Button color="gray" onClick={clearDateFilters} className="mt-4">
+              {(startDate || endDate) && (
+              <Button color="gray" onClick={clearDateFilters}>
                 Clear
               </Button>
-            )}
+              )}
+            </div>
           </div>
           <TextInput 
             type='text' 
@@ -393,6 +403,7 @@ const Bill = () => {
 
       <Table hoverable className='shadow-md mt-4'>
         <Table.Head>
+          <Table.HeadCell>Date</Table.HeadCell>
           <Table.HeadCell>Order Number</Table.HeadCell>
           <Table.HeadCell>Products</Table.HeadCell>
           <Table.HeadCell>Subtotal (RM)</Table.HeadCell>
@@ -400,14 +411,17 @@ const Bill = () => {
           <Table.HeadCell>Total (RM)</Table.HeadCell>
           <Table.HeadCell>Payment Type</Table.HeadCell>
           <Table.HeadCell>Status</Table.HeadCell>
-          <Table.HeadCell>Date</Table.HeadCell>
           <Table.HeadCell>Action</Table.HeadCell>
         </Table.Head>
         <Table.Body className="divide-y">
           {paginatedOrders.map((order) => (
             <Table.Row key={order._id} className="bg-white dark:border-gray-700 dark:bg-gray-800">
+              <Table.Cell>
+                {formatDisplayDate(order.createdAt)}
+              </Table.Cell>
               <Table.Cell className='whitespace-nowrap'>
-                <div className='text-center'>{order.table?.tablename || 'N/A'}</div> {order.ordernumber}
+                <div className='text-center'>{order.table?.tablename || 'N/A'}</div> 
+                {order.ordernumber}
               </Table.Cell>
               <Table.Cell>
                 <div className="space-y-1">
@@ -445,9 +459,6 @@ const Bill = () => {
                 <Badge color={order.status === 'completed' ? 'success' : 'warning'}>
                   {order.status}
                 </Badge>
-              </Table.Cell>
-              <Table.Cell>
-                {new Date(order.createdAt).toLocaleDateString()}
               </Table.Cell>
               <Table.Cell>
                 <div className='flex flex-col gap-2'>

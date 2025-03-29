@@ -9,7 +9,10 @@ export const createOrder = async (req, res, next) => {
 
         // Generate order number
         const now = new Date();
-        const datePart = now.toISOString().split('T')[0].replace(/-/g, '');
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const datePart = `${year}${month}${day}`;
         const randomPart = Math.floor(1000 + Math.random() * 9000);
         const ordernumber = `ORD-${datePart}-${randomPart}`;
         
