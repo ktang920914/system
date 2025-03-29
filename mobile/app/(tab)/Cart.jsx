@@ -381,9 +381,10 @@ export default function Cart() {
           }
           else itemName = 'Unknown Item';
           
-          if (choice.chooseitemquantity || choice.combochooseitemquantity) {
-            quantity = choice.chooseitemquantity || choice.combochooseitemquantity;
-          }
+          quantity = choice.chooseitemquantity || 
+                   choice.combochooseitemquantity || 
+                   choice.quantity || 
+                   1;
         }
         
         if (itemMap.has(itemName)) {
@@ -571,58 +572,150 @@ export default function Cart() {
         <Text className="text-gray-500">No orders found</Text>
       ) : (
         allOrders.map((order) => (
-          <TouchableOpacity
+          <View
             key={`order-${order.ordernumber}`}
             className="mb-4 border border-gray-300 p-3 rounded-lg"
-            onPress={() => {
-              if (order.status === 'completed') return;
-              
-              setCurrentOrder({
-                ordernumber: order.ordernumber,
-                items: order.orderitems || [],
-                comboItems: order.ordercomboitem || [],
-                createdAt: order.createdAt,
-                status: order.status,
-                updatedAt: order.updatedAt,
-                table: order.table?.tablename || tableName || ''
-              });
-              
-              router.setParams({
-                tableName: order.table?.tablename || tableName,
-                tableId,
-                orderDetails: JSON.stringify({
-                  ordernumber: order.ordernumber,
-                  items: order.orderitems,
-                  comboItems: order.ordercomboitem,
-                  status: order.status,
-                  table: order.table
-                })
-              });
-              
-              setActiveTab('current');
-            }}
           >
-            <View className="flex-row justify-between">
-              <Text className="font-bold">Order #{order.ordernumber}</Text>
-              <Text className={`font-bold ${
-                order.status === 'completed' ? 'text-green-600' : 
-                order.status === 'cancelled' ? 'text-red-600' : 'text-blue-600'
-              }`}>
-                {order.status}
+            <TouchableOpacity
+              onPress={() => {
+                if (order.status === 'completed') return;
+                
+                setCurrentOrder({
+                  ordernumber: order.ordernumber,
+                  items: order.orderitems || [],
+                  comboItems: order.ordercomboitem || [],
+                  createdAt: order.createdAt,
+                  status: order.status,
+                  updatedAt: order.updatedAt,
+                  table: order.table?.tablename || tableName || ''
+                });
+                
+                router.setParams({
+                  tableName: order.table?.tablename || tableName,
+                  tableId,
+                  orderDetails: JSON.stringify({
+                    ordernumber: order.ordernumber,
+                    items: order.orderitems,
+                    comboItems: order.ordercomboitem,
+                    status: order.status,
+                    table: order.table
+                  })
+                });
+                
+                setActiveTab('current');
+              }}
+            >
+              <View className="flex-row justify-between">
+                <Text className="font-bold">Order #{order.ordernumber}</Text>
+                <Text className={`font-bold ${
+                  order.status === 'completed' ? 'text-green-600' : 
+                  order.status === 'cancelled' ? 'text-red-600' : 'text-blue-600'
+                }`}>
+                  {order.status}
+                </Text>
+              </View>
+              <Text className="text-gray-500 text-sm">
+                {new Date(order.createdAt).toLocaleString()}
               </Text>
+              
+              {order.table && (
+                <Text className="mt-1">
+                  Table: {typeof order.table === 'object' ? order.table.tablename : order.table}
+                </Text>
+              )}
+            </TouchableOpacity>
+            
+            {/* Display Order Items */}
+            <View className="mt-2 pt-2 border-t border-gray-200">
+              <Text className="font-medium mb-1">Items:</Text>
+              {order.orderitems?.length === 0 && order.ordercomboitem?.length === 0 ? (
+                <Text className="text-gray-500 text-sm">No items in this order</Text>
+              ) : (
+                <>
+                  {order.orderitems?.map((item, index) => (
+                    <View key={`item-${index}`} className="flex-row justify-between mb-1">
+                      <Text className="text-sm">
+                        {item.orderproductname} x{item.orderproductquantity}
+                      </Text>
+                      <Text className="text-sm">
+                        RM {(item.orderproductprice * item.orderproductquantity).toFixed(2)}
+                      </Text>
+                    </View>
+                  ))}
+                  
+                  {order.ordercomboitem?.map((combo, index) => (
+                    <View key={`combo-${index}`} className="mb-1">
+                      <View className="flex-row justify-between">
+                        <Text className="text-sm">
+                          {combo.comboproductname || combo.comboproductitem} (Combo) x{combo.comboproductquantity}
+                        </Text>
+                        <Text className="text-sm">
+                          RM {(combo.comboproductprice * combo.comboproductquantity).toFixed(2)}
+                        </Text>
+                      </View>
+                      {combo.combochooseitems?.length > 0 && (
+                        <View className="ml-2 mt-1">
+                          <Text className="text-xs text-gray-500">Includes:</Text>
+                          {combo.combochooseitems.map((choice, idx) => {
+                            let itemName;
+                            let quantity = 1;
+                            
+                            if (typeof choice === 'string') {
+                              itemName = choice;
+                            } else {
+                              if (choice.combochooseitemname) itemName = choice.combochooseitemname;
+                              else if (choice.productname) itemName = choice.productname;
+                              else if (choice.name) itemName = choice.name;
+                              else if (choice.itemName) itemName = choice.itemName;
+                              else if (choice.productId) {
+                                const product = products.find(p => p._id === choice.productId);
+                                itemName = product?.productname || 'Unknown Item';
+                              } else {
+                                itemName = 'Unknown Item';
+                              }
+                              
+                              quantity = choice.chooseitemquantity || 
+                                        choice.combochooseitemquantity || 
+                                        choice.quantity || 
+                                        1;
+                            }
+                            
+                            return (
+                              <Text key={`choice-${idx}`} className="text-xs text-gray-500 ml-1">
+                                • {itemName} {quantity > 1 ? `x${quantity}` : ''}
+                              </Text>
+                            );
+                          })}
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </>
+              )}
             </View>
-            <Text className="text-gray-500 text-sm">
-              {new Date(order.createdAt).toLocaleString()}
-            </Text>
             
-            {order.table && (
-              <Text className="mt-1">
-                Table: {typeof order.table === 'object' ? order.table.tablename : order.table}
-              </Text>
-            )}
-            
-            <Text className="mt-1">Total: RM {order.ordertotal?.toFixed(2) || '0.00'}</Text>
-          </TouchableOpacity>
+            <View className="mt-2 pt-2 border-t border-gray-200">
+              <View className="flex-row justify-between">
+                <Text className="font-medium">Total:</Text>
+                <Text className="font-bold">
+                  RM {order.ordertotal?.toFixed(2) || '0.00'}
+                </Text>
+              </View>
+              {order.paymentType && (
+                <View className="flex-row justify-between mt-1">
+                  <Text className="text-sm text-gray-500">Payment Method:</Text>
+                  <Text className="text-sm text-gray-500">
+                    {order.paymentType === 'CASH' ? 'Cash' : 
+                     order.paymentType === 'VISA' ? 'Visa' :
+                     order.paymentType === 'MASTER' ? 'MasterCard' :
+                     order.paymentType === 'EWALLET-TNG' ? "Touch 'n Go" :
+                     order.paymentType === 'DUITNOW' ? 'DuitNow' :
+                     order.paymentType === 'BANK-TRANSFER' ? 'Bank Transfer' : 'Other'}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
         ))
       )}
     </ScrollView>
