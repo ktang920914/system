@@ -76,15 +76,23 @@ const Bill = () => {
       const paymentType = order.paymentType || '';
       const status = order.status || '';
       
+      // Numeric fields search
+      const subtotal = order.subtotal?.toString() || '';
+      const tax = order.taxtotal?.toString() || '';
+      const total = order.ordertotal?.toString() || '';
+      
       // Check basic fields first
       const basicMatch = 
         tableName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         paymentType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        status.toLowerCase().includes(searchTerm.toLowerCase());
+        status.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        subtotal.includes(searchTerm) ||
+        tax.includes(searchTerm) ||
+        total.includes(searchTerm);
       
       if (basicMatch) return true;
-
+  
       // Check product names if basic fields don't match
       const products = formatProducts(order);
       return products.some(product => 
