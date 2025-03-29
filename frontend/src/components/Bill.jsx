@@ -30,24 +30,59 @@ const Bill = () => {
 
   const handlePrint = async (order) => {
     try {
-      // 准备打印数据
+      // Prepare print data with formatted items
+      const formatItemsForPrint = (order) => {
+        let items = [];
+        
+        // Regular items
+        if (order.orderitems && order.orderitems.length > 0) {
+          items = order.orderitems.map(item => ({
+            name: item.orderproductname,
+            quantity: item.orderproductquantity,
+            price: (item.orderproductprice * item.orderproductquantity).toFixed(2),
+            isCombo: false
+          }));
+        }
+        
+        // Combo items
+        if (order.ordercomboitem && order.ordercomboitem.length > 0) {
+          order.ordercomboitem.forEach(combo => {
+            // Main combo item
+            items.push({
+              name: combo.comboproductitem,
+              quantity: combo.comboproductquantity,
+              price: (combo.comboproductprice * combo.comboproductquantity).toFixed(2),
+              isCombo: true
+            });
+            
+            // Combo choose items
+            if (combo.combochooseitems && combo.combochooseitems.length > 0) {
+              combo.combochooseitems.forEach(chooseItem => {
+                items.push({
+                  name: `- ${chooseItem.combochooseitemname}`,
+                  quantity: chooseItem.combochooseitemquantity,
+                  price: '', // No price for choose items
+                  isComboItem: true
+                });
+              });
+            }
+          });
+        }
+        
+        return items;
+      };
+  
       const printData = {
         orderNumber: order.ordernumber,
         table: order.table?.tablename || 'N/A',
         date: order.createdAt,
-        items: formatProducts(order)
-          .filter(item => !item.isChooseItem)
-          .map(item => ({
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price
-          })),
+        items: formatItemsForPrint(order),
         subtotal: order.subtotal?.toFixed(2),
         tax: order.taxtotal?.toFixed(2),
         total: order.ordertotal?.toFixed(2)
       };
   
-      // 开发模式预览 - 改为英文
+      // Development mode preview
       if (process.env.NODE_ENV === 'development') {
         const previewContent = [
           '=== RECEIPT ===',
@@ -55,13 +90,18 @@ const Bill = () => {
           `Table: ${printData.table}`,
           `Date: ${new Date(printData.date).toLocaleString()}`,
           '-----------------------------',
-          ...printData.items.map(item => 
-            `${item.name.padEnd(20)} x${item.quantity.toString().padStart(3)} RM ${item.price}`
-          ),
+          ...printData.items.map(item => {
+            // Format main items with price
+            if (!item.name.startsWith('- ') && item.price) {
+              return `${item.name.padEnd(20)} x${item.quantity.toString().padStart(2)} RM ${item.price}`;
+            }
+            // Format combo choose items without price
+            return `${item.name.padEnd(20)} x${item.quantity.toString().padStart(2)}`;
+          }),
           '-----------------------------',
-          `Subtotal:`.padEnd(20) + `RM ${printData.subtotal}`,
-          `Tax 8%:`.padEnd(20) + `RM ${printData.tax}`,
-          `Total:`.padEnd(20) + `RM ${printData.total}`,
+          `Subtotal:`.padEnd(24) + `RM ${printData.subtotal}`,
+          `Tax 8%:`.padEnd(24) + `RM ${printData.tax}`,
+          `Total:`.padEnd(24) + `RM ${printData.total}`,
           'Thank you!'
         ].join('\n');
   
@@ -79,7 +119,7 @@ const Bill = () => {
         `);
         previewWindow.document.close();
       } else {
-        // 生产环境调用真实打印
+        // Production environment - real printing
         const response = await fetch('/api/printer/print-receipt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
