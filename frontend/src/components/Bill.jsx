@@ -28,6 +28,76 @@ const Bill = () => {
     fetchOrders();
   }, []);
 
+  const handlePrint = async (order) => {
+    try {
+      // 准备打印数据
+      const printData = {
+        orderNumber: order.ordernumber,
+        table: order.table?.tablename || 'N/A',
+        date: order.createdAt,
+        items: formatProducts(order)
+          .filter(item => !item.isChooseItem)
+          .map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price
+          })),
+        subtotal: order.subtotal?.toFixed(2),
+        tax: order.taxtotal?.toFixed(2),
+        total: order.ordertotal?.toFixed(2)
+      };
+  
+      // 开发模式预览 - 改为英文
+      if (process.env.NODE_ENV === 'development') {
+        const previewContent = [
+          '=== RECEIPT ===',
+          `Order: ${printData.orderNumber}`,
+          `Table: ${printData.table}`,
+          `Date: ${new Date(printData.date).toLocaleString()}`,
+          '-----------------------------',
+          ...printData.items.map(item => 
+            `${item.name.padEnd(20)} x${item.quantity.toString().padStart(3)} RM ${item.price}`
+          ),
+          '-----------------------------',
+          `Subtotal:`.padEnd(20) + `RM ${printData.subtotal}`,
+          `Tax 8%:`.padEnd(20) + `RM ${printData.tax}`,
+          `Total:`.padEnd(20) + `RM ${printData.total}`,
+          'Thank you!'
+        ].join('\n');
+  
+        const previewWindow = window.open('', '_blank');
+        previewWindow.document.write(`
+          <pre style="font-family: monospace; padding: 20px;">
+            ${previewContent}
+          </pre>
+          <script>
+            setTimeout(() => {
+              window.print();
+              window.close();
+            }, 200);
+          </script>
+        `);
+        previewWindow.document.close();
+      } else {
+        // 生产环境调用真实打印
+        const response = await fetch('/api/printer/print-receipt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            printerName: 'cashier',
+            orderData: printData
+          })
+        });
+  
+        if (!response.ok) throw new Error('Print failed');
+        alert('Receipt sent to printer');
+      }
+    } catch (error) {
+      console.error('Print error:', error);
+      alert(`Print failed: ${error.message}`);
+    }
+  };
+
   // Format date to match order number format (local time)
   const formatDisplayDate = (dateString) => {
     const date = new Date(dateString);
@@ -465,7 +535,7 @@ const Bill = () => {
                   <Button color='warning' onClick={() => handleRefundClick(order)}>
                     Refund
                   </Button>
-                  <Button color='success'>
+                  <Button color='success' onClick={() => handlePrint(order)}>
                     Print
                   </Button>
                 </div>
