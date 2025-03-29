@@ -9,6 +9,8 @@ const Bill = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedItems, setSelectedItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const ITEMS_PER_PAGE = 5;
 
   useEffect(() => {
@@ -68,20 +70,32 @@ const Bill = () => {
 
   const getFilteredOrders = () => {
     return orders.filter(order => {
+      // Date range filtering
+      if (startDate || endDate) {
+        const orderDate = new Date(order.createdAt);
+        const start = startDate ? new Date(startDate) : null;
+        const end = endDate ? new Date(endDate) : null;
+        
+        if (start && orderDate < start) return false;
+        if (end) {
+          // Include the entire end date (up to 23:59:59)
+          const endOfDay = new Date(end);
+          endOfDay.setHours(23, 59, 59, 999);
+          if (orderDate > endOfDay) return false;
+        }
+      }
+      
+      // Search term filtering
       if (!searchTerm) return true;
       
-      // Basic fields search
       const tableName = order.table?.tablename || '';
       const orderNumber = order.ordernumber || '';
       const paymentType = order.paymentType || '';
       const status = order.status || '';
-      
-      // Numeric fields search
       const subtotal = order.subtotal?.toString() || '';
       const tax = order.taxtotal?.toString() || '';
       const total = order.ordertotal?.toString() || '';
       
-      // Check basic fields first
       const basicMatch = 
         tableName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -93,7 +107,6 @@ const Bill = () => {
       
       if (basicMatch) return true;
   
-      // Check product names if basic fields don't match
       const products = formatProducts(order);
       return products.some(product => 
         product.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -261,7 +274,8 @@ const Bill = () => {
   };
 
   const generateExcelReport = () => {
-    const reportData = orders.flatMap(order => {
+    const filtered = getFilteredOrders();
+    const reportData = filtered.flatMap(order => {
       const baseData = {
         'Order Number': order.ordernumber,
         'Table': order.table?.tablename || 'N/A',
@@ -318,6 +332,11 @@ const Bill = () => {
     XLSX.writeFile(wb, `Bills_Report_${date}.xlsx`);
   };
 
+  const clearDateFilters = () => {
+    setStartDate('');
+    setEndDate('');
+  };
+
   const filteredOrders = getFilteredOrders();
   const paginatedOrders = filteredOrders.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
@@ -330,8 +349,34 @@ const Bill = () => {
       {renderRefundModal()}
       
       <div className='flex items-center justify-between'>
-        <h1 className='text-2xl text-gray-500 font-semibold'>Bills</h1>
+        <h1 className='text-2xl text-gray-500 font-semibold sm:block hidden'>Bills</h1>
         <div className='flex items-center gap-2'>
+        <div className="flex items-center gap-2">
+            <div className='flex items-center gap-1'>
+              <Label htmlFor="start-date" value="Start Date" />
+              <TextInput
+                id="start-date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className='flex items-center gap-1'>
+              <Label htmlFor="end-date" value="End Date" />
+              <TextInput
+                id="end-date"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate}
+              />
+            </div>
+            {(startDate || endDate) && (
+              <Button color="gray" onClick={clearDateFilters} className="mt-4">
+                Clear
+              </Button>
+            )}
+          </div>
           <TextInput 
             type='text' 
             placeholder='Search'
@@ -355,6 +400,7 @@ const Bill = () => {
           <Table.HeadCell>Total (RM)</Table.HeadCell>
           <Table.HeadCell>Payment Type</Table.HeadCell>
           <Table.HeadCell>Status</Table.HeadCell>
+          <Table.HeadCell>Date</Table.HeadCell>
           <Table.HeadCell>Action</Table.HeadCell>
         </Table.Head>
         <Table.Body className="divide-y">
@@ -401,6 +447,9 @@ const Bill = () => {
                 </Badge>
               </Table.Cell>
               <Table.Cell>
+                {new Date(order.createdAt).toLocaleDateString()}
+              </Table.Cell>
+              <Table.Cell>
                 <div className='flex flex-col gap-2'>
                   <Button color='warning' onClick={() => handleRefundClick(order)}>
                     Refund
@@ -426,7 +475,7 @@ const Bill = () => {
         </div>
       ) : (
         <div className='text-center py-8 text-gray-500'>
-          {searchTerm ? 'No matching orders found' : 'No orders available'}
+          {searchTerm || startDate || endDate ? 'No matching orders found' : 'No orders available'}
         </div>
       )}
     </div>
