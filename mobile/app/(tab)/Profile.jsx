@@ -6,9 +6,11 @@ export default function Profile() {
 
     const {currentUser, signOutSuccess} = useUserstore()
 
+    const API_BASE_URL = 'http://192.168.208.66:3000'
+
     const handleSignOut = async () => {
         try {
-            const res = await fetch('http://192.168.208.66:3000/api/user/signout',{
+            const res = await fetch(`${API_BASE_URL}/api/user/signout`,{
                 method:'POST'
             })
             const data = await res.json()

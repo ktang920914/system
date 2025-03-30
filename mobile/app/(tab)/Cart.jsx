@@ -25,9 +25,12 @@ export default function Cart() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentType, setPaymentType] = useState('CASH');
 
+  const API_BASE_URL = 'http://192.168.208.66:3000'
+
+
   const fetchProducts = async () => {
     try {
-      const response = await fetch('http://192.168.208.66:3000/api/product/get-products');
+      const response = await fetch(`${API_BASE_URL}/api/product/get-products`);
       const data = await response.json();
       if (response.ok) setProducts(data);
     } catch (error) {
@@ -37,7 +40,7 @@ export default function Cart() {
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('http://192.168.208.66:3000/api/order/get-orders');
+      const response = await fetch(`${API_BASE_URL}/api/order/get-orders`);
       const data = await response.json();
       if (response.ok) setAllOrders(data.orders || []);
     } catch (error) {
@@ -52,7 +55,7 @@ export default function Cart() {
 
       if (currentOrder.ordernumber) {
         const orderResponse = await fetch(
-          `http://192.168.208.66:3000/api/order/get-order/${currentOrder.ordernumber}`
+          `${API_BASE_URL}/api/order/get-order/${currentOrder.ordernumber}`
         );
         
         if (orderResponse.ok) {
@@ -255,7 +258,7 @@ export default function Cart() {
       }));
 
       const response = await fetch(
-        `http://192.168.208.66:3000/api/order/update-order/${currentOrder.ordernumber}`,
+        `${API_BASE_URL}/api/order/update-order/${currentOrder.ordernumber}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -316,7 +319,7 @@ export default function Cart() {
       setShowPaymentModal(false);
       
       const response = await fetch(
-        `http://192.168.208.66:3000/api/order/update-order-totals/${currentOrder.ordernumber}`,
+        `${API_BASE_URL}/api/order/update-order-totals/${currentOrder.ordernumber}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },

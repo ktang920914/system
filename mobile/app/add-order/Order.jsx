@@ -19,6 +19,9 @@ export default function Order() {
   const [currentComboAction, setCurrentComboAction] = useState(null);
   const [selectedComboChoices, setSelectedComboChoices] = useState([]);
 
+  const API_BASE_URL = 'http://192.168.208.66:3000'
+
+
   // Fetch products and combos data
   useEffect(() => {
     const fetchData = async () => {
@@ -26,8 +29,8 @@ export default function Order() {
         setLoading(true);
         
         const [productsRes, combosRes] = await Promise.all([
-          fetch('http://192.168.208.66:3000/api/product/get-products'),
-          fetch('http://192.168.208.66:3000/api/combo/get-combos')
+          fetch(`${API_BASE_URL}/api/product/get-products`),
+          fetch(`${API_BASE_URL}/api/combo/get-combos`)
         ]);
         
         const [productsData, combosData] = await Promise.all([
@@ -324,11 +327,11 @@ export default function Order() {
   const getOrderEndpoint = () => {
     return existingOrder 
       ? {
-          endpoint: `http://192.168.208.66:3000/api/order/update-order/${JSON.parse(existingOrder).ordernumber}`,
+          endpoint: `${API_BASE_URL}/api/order/update-order/${JSON.parse(existingOrder).ordernumber}`,
           method: 'PUT'
         }
       : {
-          endpoint: 'http://192.168.208.66:3000/api/order/create-order',
+          endpoint: `${API_BASE_URL}/api/order/create-order`,
           method: 'POST'
         };
   };
