@@ -17,7 +17,10 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.yourcompany.mobile",
-      "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"],
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ],
       "usesCleartextTraffic": true
     },
     "web": {
@@ -39,6 +42,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "50556be9-d17c-4424-bace-9b76ddc5eb07"
+      }
     }
   }
 }
