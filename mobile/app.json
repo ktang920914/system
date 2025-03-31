@@ -16,7 +16,6 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.yourcompany.mobile",
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE"
