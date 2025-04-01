@@ -319,7 +319,7 @@ const Product = () => {
                                     <Table.Cell>{product.productname}</Table.Cell>
                                     <Table.Cell>
                                         <img 
-                                            src={product.productimage ? URL.createObjectURL(product.productimage) : productImage} 
+                                            src={product.productimage ? (product.productimage) : productImage} 
                                             alt={product.productname} 
                                             className="w-16 h-16 object-cover" 
                                         />
